@@ -60,7 +60,7 @@ import {
   SnapController,
   IframeExecutionService,
 } from '@metamask/snaps-controllers';
-import SnapKeyring from 'snap-keyring';
+import SnapKeyring from './lib/snap-keyring';
 ///: END:ONLY_INCLUDE_IN
 
 import {
@@ -702,7 +702,7 @@ export default class MetamaskController extends EventEmitter {
     }
 
     ///: BEGIN:ONLY_INCLUDE_IN(flask)
-    additionalKeyrings.push(SnapKeyring);
+    additionalKeyrings.push(keyringBuilderFactory(SnapKeyring));
     ///: END:ONLY_INCLUDE_IN
 
     this.keyringController = new KeyringController({
