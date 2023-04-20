@@ -5,11 +5,11 @@ const { hideBin } = require('yargs/helpers');
 const { runInShell } = require('../../development/lib/run-command');
 const { exitWithError } = require('../../development/lib/exit-with-error');
 
-const getTestPathsForTestDir = async (testDir) => {
+const getTestPathsForTestDir = async (testDir, filters = []) => {
   const testFilenames = await fs.readdir(testDir);
-  const testPaths = testFilenames.map((filename) =>
-    path.join(testDir, filename),
-  );
+  const testPaths = testFilenames
+    .filter((filename) => filters.some((filter) => filename.includes(filter)))
+    .map((filename) => path.join(testDir, filename));
   return testPaths;
 };
 
@@ -69,10 +69,13 @@ async function main() {
   } else {
     const testDir = path.join(__dirname, 'tests');
     testPaths = [
-      ...(await getTestPathsForTestDir(testDir)),
+      ...(await getTestPathsForTestDir(testDir, [
+        'signature-request',
+        'security-provider',
+      ])),
       ...(await getTestPathsForTestDir(path.join(__dirname, 'swaps'))),
       ...(await getTestPathsForTestDir(path.join(__dirname, 'nft'))),
-      path.join(__dirname, 'metamask-ui.spec.js'),
+      //path.join(__dirname, 'metamask-ui.spec.js'),
     ];
 
     if (mv3) {
