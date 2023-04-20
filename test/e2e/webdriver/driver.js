@@ -504,6 +504,7 @@ class Driver {
         );
         if (!ignore) {
           errors.push(eventDescription?.description);
+          console.error('Testing 1 2 3', JSON.stringify(event));
           logBrowserError(failOnConsoleError, eventDescription?.description);
         }
       }
