@@ -367,6 +367,8 @@ class Driver {
       await this.delay(delayStep);
       timeElapsed += delayStep;
     }
+    this.checkBrowserForConsoleErrors(false);
+    this.checkBrowserForConsoleErrors(true);
     throw new Error('waitUntilXWindowHandles timed out polling window handles');
   }
 
