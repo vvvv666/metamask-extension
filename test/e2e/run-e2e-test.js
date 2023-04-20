@@ -104,7 +104,6 @@ async function main() {
         'mocha',
         `--config=${configFile}`,
         `--timeout=${testTimeoutInMilliseconds}`,
-        '--reporter=xunit',
         ...extraArgs,
         e2eTestPath,
         exit,
