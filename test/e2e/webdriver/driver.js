@@ -367,8 +367,17 @@ class Driver {
       await this.delay(delayStep);
       timeElapsed += delayStep;
     }
-    this.checkBrowserForConsoleErrors(false);
-    this.checkBrowserForConsoleErrors(true);
+
+    await this.checkBrowserForConsoleErrors(false);
+
+    if (this.errors.length > 0) {
+      const errorMessage = this.errors
+        .map((error) => JSON.stringify(error))
+        .join('\n');
+
+      throw new Error(`Detected console errors - ${errorMessage}`);
+    }
+
     throw new Error('waitUntilXWindowHandles timed out polling window handles');
   }
 
