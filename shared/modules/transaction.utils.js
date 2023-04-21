@@ -176,8 +176,6 @@ export async function determineTransactionType(txParams, query) {
     contractCode = resultCode;
 
     if (isContractAddress) {
-      const hasValue = txParams.value && txParams.value !== '0x0';
-
       const tokenMethodName = [
         TransactionType.tokenMethodApprove,
         TransactionType.tokenMethodSetApprovalForAll,
@@ -186,8 +184,13 @@ export async function determineTransactionType(txParams, query) {
         TransactionType.tokenMethodSafeTransferFrom,
       ].find((methodName) => isEqualCaseInsensitive(methodName, name));
 
+      const isSendWithApprove =
+        txParams.value &&
+        txParams.value !== '0x0' &&
+        tokenMethodName === TransactionType.tokenMethodApprove;
+
       result =
-        data && tokenMethodName && !hasValue
+        data && tokenMethodName && !isSendWithApprove
           ? tokenMethodName
           : TransactionType.contractInteraction;
     } else {
