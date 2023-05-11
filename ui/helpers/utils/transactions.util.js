@@ -215,3 +215,10 @@ export function getTransactionTypeTitle(t, type, nativeCurrency = 'ETH') {
     }
   }
 }
+
+export function formatWallet(wallet) {
+  return `${wallet.slice(0, 8)}...${wallet.slice(
+    wallet.length - 8,
+    wallet.length,
+  )}`;
+}
