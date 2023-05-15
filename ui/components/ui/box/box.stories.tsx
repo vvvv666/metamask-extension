@@ -596,7 +596,8 @@ export const ResponsiveProps = () => {
         marginBottom={[0]}
         padding={[2, 4]}
         gap={[2, 4]}
-        display={[DISPLAY.FLEX, null, null, DISPLAY.NONE]}
+        display={[DISPLAY.FLEX]}
+        flexWrap={FLEX_WRAP.WRAP}
         flexDirection={[
           FLEX_DIRECTION.COLUMN,
           FLEX_DIRECTION.COLUMN,
@@ -666,6 +667,51 @@ export const ResponsiveProps = () => {
         >
           Responsive Border Radius 2
         </Box>
+      </Box>
+      <Text marginBottom={4} marginTop={4}>
+        Boxes below are only visible on certain screen sizes
+      </Text>
+      <Box
+        padding={4}
+        display={[DISPLAY.BLOCK, DISPLAY.NONE]}
+        backgroundColor={BackgroundColor.infoMuted}
+      >
+        This box is only visible on screens 0px - 575px
+      </Box>
+      <Box
+        padding={4}
+        display={[DISPLAY.BLOCK, null, DISPLAY.NONE]}
+        backgroundColor={BackgroundColor.warningMuted}
+      >
+        This box is only visible on screens 0px - 767px
+      </Box>
+      <Box
+        padding={4}
+        display={[DISPLAY.BLOCK, null, null, DISPLAY.NONE]}
+        backgroundColor={BackgroundColor.errorMuted}
+      >
+        This box is only visible on screens 0px - 1279px
+      </Box>
+      <Box
+        padding={4}
+        display={[DISPLAY.NONE, null, null, DISPLAY.BLOCK]}
+        backgroundColor={BackgroundColor.successMuted}
+      >
+        This box is only visible on screens 1280px and above
+      </Box>
+      <Box
+        padding={4}
+        display={[DISPLAY.NONE, null, DISPLAY.BLOCK]}
+        backgroundColor={BackgroundColor.backgroundAlternative}
+      >
+        This box is only visible on screens 768px and above
+      </Box>
+      <Box
+        padding={4}
+        display={[DISPLAY.NONE, DISPLAY.BLOCK]}
+        borderColor={BorderColor.borderDefault}
+      >
+        This box is only visible on screens 576px and above
       </Box>
     </>
   );
@@ -932,13 +978,4 @@ export const Width: ComponentStory<typeof Box> = () => {
       </Box>
     </>
   );
-};
-
-Width.args = {
-  width: [
-    BLOCK_SIZES.HALF,
-    BLOCK_SIZES.ONE_FIFTH,
-    BLOCK_SIZES.THREE_FOURTHS,
-    BLOCK_SIZES.ONE_FOURTH,
-  ],
 };
