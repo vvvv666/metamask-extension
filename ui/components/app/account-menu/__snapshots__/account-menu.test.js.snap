@@ -101,7 +101,7 @@ exports[`Account Menu Render Content should not render keyring label if keyring 
                 title="0 ETH"
               >
                 <span
-                  class="box mm-text currency-display-component__text mm-text--body-md box--flex-direction-row box--color-text-default"
+                  class="box mm-text currency-display-component__text mm-text--body-md mm-text--ellipsis box--flex-direction-row box--color-text-default"
                 >
                   0
                 </span>
@@ -126,7 +126,7 @@ exports[`Account Menu Render Content should not render keyring label if keyring 
               title="0 ETH"
             >
               <span
-                class="box mm-text currency-display-component__text mm-text--body-md box--flex-direction-row box--color-text-default"
+                class="box mm-text currency-display-component__text mm-text--body-md mm-text--ellipsis box--flex-direction-row box--color-text-default"
               >
                 0
               </span>
@@ -210,7 +210,7 @@ exports[`Account Menu Render Content should not render keyring label if keyring 
                 title="0 ETH"
               >
                 <span
-                  class="box mm-text currency-display-component__text mm-text--body-md box--flex-direction-row box--color-text-default"
+                  class="box mm-text currency-display-component__text mm-text--body-md mm-text--ellipsis box--flex-direction-row box--color-text-default"
                 >
                   0
                 </span>
@@ -235,7 +235,7 @@ exports[`Account Menu Render Content should not render keyring label if keyring 
               title="0 ETH"
             >
               <span
-                class="box mm-text currency-display-component__text mm-text--body-md box--flex-direction-row box--color-text-default"
+                class="box mm-text currency-display-component__text mm-text--body-md mm-text--ellipsis box--flex-direction-row box--color-text-default"
               >
                 0
               </span>
