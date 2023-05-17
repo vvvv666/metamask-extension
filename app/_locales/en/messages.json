@@ -1907,6 +1907,9 @@
   "install": {
     "message": "Install"
   },
+  "install": {
+    "message": "Install"
+  },
   "installOrigin": {
     "message": "Install origin"
   },
@@ -3769,9 +3772,39 @@
   "smartTransaction": {
     "message": "Smart transaction"
   },
+  "snapConfigure": {
+    "message": "Configure"
+  },
   "snapContent": {
     "message": "This content is coming from $1",
     "description": "This is shown when a snap shows transaction insight information in the confirmation UI. $1 is a link to the snap's settings page with the link text being the name of the snap."
+  },
+  "snapCreateAccountSubtitle": {
+    "message": "Choose how to secure your new account using Snaps."
+  },
+  "snapCreateAccountTitle": {
+    "message": "Create a Snap account"
+  },
+  "snapCreatedByMetamask": {
+    "message": "By MetaMask"
+  },
+  "snapDetailAudits": {
+    "message": "Audit"
+  },
+  "snapDetailDeveloper": {
+    "message": "Developer"
+  },
+  "snapDetailLastUpdated": {
+    "message": "Updated"
+  },
+  "snapDetailTags": {
+    "message": "Tags"
+  },
+  "snapDetailVersion": {
+    "message": "Version"
+  },
+  "snapDetailWebsite": {
+    "message": "Website"
   },
   "snapError": {
     "message": "Snap Error: '$1'. Error Code: '$2'",
@@ -3805,6 +3838,9 @@
     "message": "Grant $2 public key access to $1",
     "description": "The first parameter is the name of the snap and the second one is the protocol"
   },
+  "snapIsAudited": {
+    "message": "Audited"
+  },
   "snapResultError": {
     "message": "Error"
   },
@@ -3816,6 +3852,9 @@
   },
   "snapUpdate": {
     "message": "Update snap"
+  },
+  "snapUpdateAvailable": {
+    "message": "Update available"
   },
   "snapUpdateRequest": {
     "message": "$1 wants to update $2. Make sure you trust the authors before you proceed.",
