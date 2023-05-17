@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import classnames from 'classnames';
 import { ObjectInspector } from 'react-inspector';
+import { ethErrors, serializeError } from 'eth-rpc-errors';
 import LedgerInstructionField from '../ledger-instruction-field';
 import { MESSAGE_TYPE } from '../../../../shared/constants/app';
 import {
@@ -70,6 +71,9 @@ export default class SignatureRequestOriginal extends Component {
     messagesCount: PropTypes.number,
     showRejectTransactionsConfirmationModal: PropTypes.func.isRequired,
     cancelAll: PropTypes.func.isRequired,
+    cancelAllApprovals: PropTypes.func.isRequired,
+    rejectPendingApproval: PropTypes.func.isRequired,
+    resolvePendingApproval: PropTypes.func.isRequired,
     providerConfig: PropTypes.object,
     ///: BEGIN:ONLY_INCLUDE_IN(build-mmi)
     selectedAccount: PropTypes.object,
@@ -241,19 +245,36 @@ export default class SignatureRequestOriginal extends Component {
   };
 
   onSubmit = async (event) => {
-    const { clearConfirmTransaction, history, mostRecentOverviewPage, sign } =
-      this.props;
+    const {
+      clearConfirmTransaction,
+      history,
+      mostRecentOverviewPage,
+      sign,
+      resolvePendingApproval,
+      txData: { id },
+    } = this.props;
 
     await sign(event);
+    await resolvePendingApproval(id);
     clearConfirmTransaction();
     history.push(mostRecentOverviewPage);
   };
 
   onCancel = async (event) => {
-    const { clearConfirmTransaction, history, mostRecentOverviewPage, cancel } =
-      this.props;
+    const {
+      clearConfirmTransaction,
+      history,
+      mostRecentOverviewPage,
+      cancel,
+      rejectPendingApproval,
+      txData: { id },
+    } = this.props;
 
     await cancel(event);
+    await rejectPendingApproval(
+      id,
+      serializeError(ethErrors.provider.userRejectedRequest()),
+    );
     clearConfirmTransaction();
     history.push(mostRecentOverviewPage);
   };
@@ -265,8 +286,10 @@ export default class SignatureRequestOriginal extends Component {
       clearConfirmTransaction,
       history,
       mostRecentOverviewPage,
-      txData: { type },
+      txData: { type, id },
       hardwareWalletRequiresConnection,
+      rejectPendingApproval,
+      resolvePendingApproval,
     } = this.props;
     const { t } = this.context;
 
@@ -276,6 +299,10 @@ export default class SignatureRequestOriginal extends Component {
         submitText={t('sign')}
         onCancel={async (event) => {
           await cancel(event);
+          await rejectPendingApproval(
+            id,
+            serializeError(ethErrors.provider.userRejectedRequest()),
+          );
           clearConfirmTransaction();
           history.push(mostRecentOverviewPage);
         }}
@@ -284,6 +311,7 @@ export default class SignatureRequestOriginal extends Component {
             this.setState({ showSignatureRequestWarning: true });
           } else {
             await sign(event);
+            await resolvePendingApproval(id);
             clearConfirmTransaction();
             history.push(mostRecentOverviewPage);
           }
@@ -301,12 +329,14 @@ export default class SignatureRequestOriginal extends Component {
       mostRecentOverviewPage,
       showRejectTransactionsConfirmationModal,
       messagesCount,
+      cancelAllApprovals,
     } = this.props;
     const unapprovedTxCount = messagesCount;
 
     showRejectTransactionsConfirmationModal({
       unapprovedTxCount,
       onSubmit: async () => {
+        await cancelAllApprovals();
         await cancelAll();
         clearConfirmTransaction();
         history.push(mostRecentOverviewPage);

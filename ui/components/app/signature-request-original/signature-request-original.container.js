@@ -1,9 +1,16 @@
 import { connect } from 'react-redux';
 import { compose } from 'redux';
 import { withRouter } from 'react-router-dom';
+import { ethErrors, serializeError } from 'eth-rpc-errors';
 
 import { MESSAGE_TYPE } from '../../../../shared/constants/app';
-import { goHome, cancelMsgs, showModal } from '../../../store/actions';
+import {
+  goHome,
+  cancelMsgs,
+  showModal,
+  resolvePendingApproval,
+  rejectPendingApproval,
+} from '../../../store/actions';
 import {
   accountsWithSendEtherInfoSelector,
   conversionRateSelector,
@@ -80,7 +87,23 @@ function mapDispatchToProps(dispatch) {
         }),
       );
     },
+    resolvePendingApproval: (id) => dispatch(resolvePendingApproval(id)),
+    rejectPendingApproval: (id, error) =>
+      dispatch(rejectPendingApproval(id, error)),
     cancelAll: (messagesList) => dispatch(cancelMsgs(messagesList)),
+    cancelAllApprovals: (messagesList) => {
+      return Promise.all(
+        messagesList.map(
+          async ({ id }) =>
+            await dispatch(
+              rejectPendingApproval(
+                id,
+                serializeError(ethErrors.provider.userRejectedRequest()),
+              ),
+            ),
+        ),
+      );
+    },
   };
 }
 
@@ -104,7 +127,10 @@ function mergeProps(stateProps, dispatchProps, ownProps) {
 
   const fromAccount = getAccountByAddress(allAccounts, from);
 
-  const { cancelAll: dispatchCancelAll } = dispatchProps;
+  const {
+    cancelAll: dispatchCancelAll,
+    cancelAllApprovals: dispatchCancelAllApprovals,
+  } = dispatchProps;
 
   let cancel;
   let sign;
@@ -128,6 +154,8 @@ function mergeProps(stateProps, dispatchProps, ownProps) {
     cancel,
     sign,
     cancelAll: () => dispatchCancelAll(valuesFor(messagesList)),
+    cancelAllApprovals: () =>
+      dispatchCancelAllApprovals(valuesFor(messagesList)),
   };
 }
 
