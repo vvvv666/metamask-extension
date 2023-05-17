@@ -87,7 +87,9 @@ function mapDispatchToProps(dispatch) {
         }),
       );
     },
-    resolvePendingApproval: (id) => dispatch(resolvePendingApproval(id)),
+    resolvePendingApproval: (id) => {
+      dispatch(resolvePendingApproval(id));
+    },
     rejectPendingApproval: (id, error) =>
       dispatch(rejectPendingApproval(id, error)),
     cancelAll: (messagesList) => dispatch(cancelMsgs(messagesList)),
