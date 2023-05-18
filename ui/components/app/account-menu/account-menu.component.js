@@ -29,6 +29,7 @@ import {
   DEFAULT_ROUTE,
   ///: BEGIN:ONLY_INCLUDE_IN(snaps)
   NOTIFICATIONS_ROUTE,
+  ADD_SNAP_ACCOUNT_ROUTE,
   ///: END:ONLY_INCLUDE_IN
 } from '../../../helpers/constants/routes';
 import TextField from '../../ui/text-field';
@@ -412,6 +413,16 @@ export default class AccountMenu extends Component {
             <Icon name={IconName.Hardware} color={IconColor.iconAlternative} />
           }
           text={t('connectHardwareWallet')}
+        />
+        <AccountMenuItem
+          onClick={() => {
+            toggleAccountMenu();
+            history.push(ADD_SNAP_ACCOUNT_ROUTE);
+          }}
+          icon={
+            <Icon name={IconName.Snaps} color={IconColor.iconAlternative} />
+          }
+          text={t('settingAddSnapWallet')}
         />
         <div className="account-menu__divider" />
         {
