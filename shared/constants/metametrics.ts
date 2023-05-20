@@ -681,6 +681,7 @@ export enum MetaMetricsTokenEventSource {
   Dapp = 'dapp',
   Detected = 'detected',
   List = 'list',
+  DetectedReceived = 'detected_received',
 }
 
 export enum MetaMetricsTransactionEventSource {

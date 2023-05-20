@@ -262,16 +262,16 @@ export default class PendingTransactionTracker extends EventEmitter {
             this.getTokenStandardAndDetails(contractAddress, txSender),
           ),
         );
-
         const receivedTokens = tokens
           .filter((token) => !isEmpty(token))
           .reduce((acc, token) => {
-            acc[token.contractAddress.toLowerCase()] = {
+            acc[token.address.toLowerCase()] = {
               ...token,
               image: formatIconUrlWithProxy(txMeta.chainId, token.address),
             };
             return acc;
           }, {});
+
         this.addTokens(receivedTokens);
         const addedTokenValues = Object.values(receivedTokens);
 
@@ -284,9 +284,8 @@ export default class PendingTransactionTracker extends EventEmitter {
               token_contract_address: pendingToken.address,
               token_decimal_precision: pendingToken.decimals,
               unlisted: pendingToken.unlisted,
-              source_connection_method: pendingToken.isCustom
-                ? MetaMetricsTokenEventSource.Custom
-                : MetaMetricsTokenEventSource.List,
+              source_connection_method:
+                MetaMetricsTokenEventSource.DetectedReceived,
               token_standard: TokenStandard.ERC20,
               asset_type: AssetType.token,
             },

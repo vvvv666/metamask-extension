@@ -1,6 +1,20 @@
 import BN from 'bn.js';
-import { TransactionStatus } from '../../../../shared/constants/transaction';
+import log from 'loglevel';
+import {
+  AssetType,
+  TransactionStatus,
+  TokenStandard,
+} from '../../../../shared/constants/transaction';
+import * as transactionUtils from '../../../../shared/lib/transactions-controller-utils';
+import * as formatIconUrlUtils from '../../../../shared/modules/format-icon-url';
+import {
+  MetaMetricsEventCategory,
+  MetaMetricsEventName,
+  MetaMetricsTokenEventSource,
+} from '../../../../shared/constants/metametrics';
 import PendingTransactionTracker from './pending-tx-tracker';
+
+jest.mock('loglevel');
 
 describe('PendingTransactionTracker', function () {
   describe('#resubmitPendingTxs', function () {
@@ -188,6 +202,51 @@ describe('PendingTransactionTracker', function () {
       expect(checkPendingTxStub).toHaveBeenCalledWith(
         expect.objectContaining({ id: 3 }),
       );
+    });
+    it('logs if call _checkPendingTx fails', async function () {
+      const txMeta = {
+        id: 1,
+        hash: '0x0593ee121b92e10d63150ad08b4b8f9c7857d1bd160195ee648fb9a0f8d00eeb',
+        status: TransactionStatus.signed,
+        txParams: {
+          from: '0x1678a085c290ebd122dc42cba69373b5953b831d',
+          nonce: '0x1',
+          value: '0xfffff',
+        },
+        history: [{}],
+        rawTx:
+          '0xf86c808504a817c800827b0d940c62bb85faa3311a998d3aba8098c1235c564966880de0b6b3a7640000802aa08ff665feb887a25d4099e40e11f0fef93ee9608f404bd3f853dd9e84ed3317a6a02ec9d3d1d6e176d4d2593dd760e74ccac753e6a0ea0d00cc9789d0d7ff1f471d',
+      };
+      const txList = [1, 2, 3].map((id) => ({ ...txMeta, id }));
+      const pendingTxTracker = new PendingTransactionTracker({
+        query: {
+          getTransactionReceipt: jest.fn(),
+        },
+        nonceTracker: {
+          getGlobalLock: async () => {
+            return { releaseLock: () => undefined };
+          },
+        },
+        getPendingTransactions: () => txList,
+        getCompletedTransactions: () => {
+          return [];
+        },
+        publishTransaction: () => undefined,
+        confirmTransaction: () => undefined,
+      });
+
+      const checkPendingTxStub = jest
+        .spyOn(pendingTxTracker, '_checkPendingTx')
+        .mockRejectedValueOnce('error - failed pending check');
+      await pendingTxTracker.updatePendingTxs();
+
+      expect(checkPendingTxStub).toHaveBeenCalledTimes(3);
+
+      expect(log.error).toHaveBeenCalledTimes(2);
+      expect(log.error).toHaveBeenCalledWith(
+        'PendingTransactionTracker - Error updating pending transactions',
+      );
+      expect(log.error).toHaveBeenCalledWith('error - failed pending check');
     });
   });
 
@@ -561,20 +620,22 @@ describe('PendingTransactionTracker', function () {
   });
 
   describe('#_checkPendingTx', function () {
+    const txMeta = {
+      id: 1,
+      hash: '0x0593ee121b92e10d63150ad08b4b8f9c7857d1bd160195ee648fb9a0f8d00eeb',
+      status: TransactionStatus.submitted,
+      txParams: {
+        from: '0x1678a085c290ebd122dc42cba69373b5953b831d',
+        nonce: '0x1',
+        value: '0xfffff',
+      },
+      history: [{}],
+      rawTx: '0xf86c808504a817c80082471d',
+      custodyId: 'testid',
+      chainId: 1,
+    };
+
     it("should emit 'tx:confirmed' if getTransactionReceipt succeeds", async function () {
-      const txMeta = {
-        id: 1,
-        hash: '0x0593ee121b92e10d63150ad08b4b8f9c7857d1bd160195ee648fb9a0f8d00eeb',
-        status: TransactionStatus.submitted,
-        txParams: {
-          from: '0x1678a085c290ebd122dc42cba69373b5953b831d',
-          nonce: '0x1',
-          value: '0xfffff',
-        },
-        history: [{}],
-        rawTx: '0xf86c808504a817c80082471d',
-        custodyId: 'testid',
-      };
       const resolvedTxReceipt = {
         from: '0x1678a085c290ebd122dc42cba69373b5953b831d',
         transactionHash:
@@ -634,6 +695,158 @@ describe('PendingTransactionTracker', function () {
       expect(listeners.confirmed).toHaveBeenCalledTimes(1);
       expect(listeners.failed).toHaveBeenCalledTimes(0);
       expect(listeners.warning).toHaveBeenCalledTimes(0);
+    });
+    it('should invoke getTokenTransfersFromTxReceipt if tx:confirmed', async function () {
+      const resolvedTxReceipt = {
+        from: '0x1678a085c290ebd122dc42cba69373b5953b831d',
+        transactionHash:
+          '0x0593ee121b92e10d63150ad08b4b8f9c7857d1bd160195ee648fb9a0f8d00eeb',
+        logs: [
+          {
+            address: '0xf56dc6695cf1f5c364edebc7dc7077ac9b586068',
+            topics: [
+              '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+              '0x000000000000000000000000c04bf211972cea9a10f30bc81b0257aa51f024c6',
+              '0x0000000000000000000000001678a085c290ebd122dc42cba69373b5953b831d',
+            ],
+          },
+        ],
+        blockNumber: '0xa8532',
+        status: '0x1',
+        to: '0xf56dc6695cf1f5c364edebc7dc7077ac9b586068',
+      };
+      const nonceBN = new BN(2);
+      const pendingTxTracker = new PendingTransactionTracker({
+        query: {
+          getTransactionReceipt: jest.fn().mockResolvedValue(resolvedTxReceipt),
+          getTransactionCount: jest.fn().mockResolvedValue(nonceBN),
+          getBlockByHash: jest.fn().mockResolvedValue({
+            timestamp: '0x64605d3e',
+            baseFeePerGas: '0x8',
+          }),
+        },
+        nonceTracker: {
+          getGlobalLock: jest.fn().mockResolvedValue({
+            releaseLock: jest.fn(),
+          }),
+        },
+        getPendingTransactions: jest.fn().mockReturnValue([]),
+        getCompletedTransactions: jest.fn().mockReturnValue([]),
+        publishTransaction: jest.fn(),
+        confirmTransaction: jest.fn(),
+        addTokens: jest.fn(),
+        getTokenStandardAndDetails: jest.fn(),
+        trackMetaMetricsEvent: jest.fn(),
+      });
+      const getTokenTransfersFromTxReceipt = jest.spyOn(
+        transactionUtils,
+        'getTokenTransfersFromTxReceipt',
+      );
+
+      await pendingTxTracker._checkPendingTx(txMeta);
+      expect(getTokenTransfersFromTxReceipt).toHaveBeenCalledTimes(1);
+      expect(getTokenTransfersFromTxReceipt).toHaveBeenCalledWith(
+        resolvedTxReceipt,
+      );
+    });
+
+    it('should deduplicate token transfers by asset contract address if tx:confirmed', async function () {
+      const resolvedTxReceipt = {
+        from: '0x1678a085c290ebd122dc42cba69373b5953b831d',
+        transactionHash:
+          '0x0593ee121b92e10d63150ad08b4b8f9c7857d1bd160195ee648fb9a0f8d00eeb',
+        logs: [
+          {
+            address: '0xf56dc6695cf1f5c364edebc7dc7077ac9b586068',
+            topics: [
+              '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+              '0x000000000000000000000000c04bf211972cea9a10f30bc81b0257aa51f024c6',
+              '0x0000000000000000000000001678a085c290ebd122dc42cba69373b5953b831d',
+            ],
+          },
+          {
+            address: '0xf56dc6695cf1f5c364edebc7dc7077ac9b586068',
+            topics: [
+              '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+              '0x000000000000000000000000c04bf211972cea9a10f30bc81b0257aa51f024c6',
+              '0x0000000000000000000000001678a085c290ebd122dc42cba69373b5953b831d',
+            ],
+          },
+        ],
+        blockNumber: '0xa8532',
+        status: '0x1',
+        to: '0xf56dc6695cf1f5c364edebc7dc7077ac9b586068',
+      };
+      const nonceBN = new BN(2);
+      const pendingTxTracker = new PendingTransactionTracker({
+        query: {
+          getTransactionReceipt: jest.fn().mockResolvedValue(resolvedTxReceipt),
+          getTransactionCount: jest.fn().mockResolvedValue(nonceBN),
+          getBlockByHash: jest.fn().mockResolvedValue({
+            timestamp: '0x64605d3e',
+            baseFeePerGas: '0x8',
+          }),
+        },
+        nonceTracker: {
+          getGlobalLock: jest.fn().mockResolvedValue({
+            releaseLock: jest.fn(),
+          }),
+        },
+        getPendingTransactions: jest.fn().mockReturnValue([]),
+        getCompletedTransactions: jest.fn().mockReturnValue([]),
+        publishTransaction: jest.fn(),
+        confirmTransaction: jest.fn(),
+        addTokens: jest.fn(),
+        getTokenStandardAndDetails: jest.fn(),
+        trackMetaMetricsEvent: jest.fn(),
+      });
+      const mockedTestToken = {
+        address: '0xf56dc6695cf1f5c364edebc7dc7077ac9b586068',
+        balance: '0x1',
+        standard: TokenStandard.ERC20,
+        decimals: 18,
+        symbol: 'test',
+        unlisted: undefined,
+      };
+      const getTokenStandardAndDetails = jest
+        .spyOn(pendingTxTracker, 'getTokenStandardAndDetails')
+        .mockResolvedValueOnce(mockedTestToken);
+
+      const formatIconUrlWithProxy = jest
+        .spyOn(formatIconUrlUtils, 'formatIconUrlWithProxy')
+        .mockReturnValueOnce(
+          'https://static.metafi.codefi.network/api/v1/tokenIcons/1/0xf56dc6695cf1f5c364edebc7dc7077ac9b586068.png',
+        );
+
+      const addTokens = jest.spyOn(pendingTxTracker, 'addTokens');
+      const trackMetaMetricsEvent = jest.spyOn(
+        pendingTxTracker,
+        'trackMetaMetricsEvent',
+      );
+
+      await pendingTxTracker._checkPendingTx(txMeta);
+      expect(getTokenStandardAndDetails).toHaveBeenCalledTimes(1);
+      expect(formatIconUrlWithProxy).toHaveBeenCalledTimes(1);
+      expect(formatIconUrlWithProxy).toHaveBeenCalledWith(
+        1,
+        '0xf56dc6695cf1f5c364edebc7dc7077ac9b586068',
+      );
+      expect(addTokens).toHaveBeenCalledTimes(1);
+      expect(trackMetaMetricsEvent).toHaveBeenCalledTimes(1);
+      expect(trackMetaMetricsEvent).toHaveBeenCalledWith({
+        event: MetaMetricsEventName.TokenAdded,
+        category: MetaMetricsEventCategory.Wallet,
+        sensitiveProperties: {
+          token_symbol: mockedTestToken.symbol,
+          token_contract_address: mockedTestToken.address,
+          token_decimal_precision: mockedTestToken.decimals,
+          unlisted: mockedTestToken.unlisted,
+          source_connection_method:
+            MetaMetricsTokenEventSource.DetectedReceived,
+          token_standard: TokenStandard.ERC20,
+          asset_type: AssetType.token,
+        },
+      });
     });
   });
 });

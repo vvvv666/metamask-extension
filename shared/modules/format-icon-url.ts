@@ -12,9 +12,12 @@ export const formatIconUrlWithProxy = ({
   chainId,
   tokenAddress,
 }: {
-  chainId: string;
+  chainId: string | number;
   tokenAddress: string;
 }) => {
-  const chainIdDecimal = convertHexToDecimal(chainId).toString();
+  const chainIdDecimal =
+    typeof chainId === 'number'
+      ? chainId.toString()
+      : convertHexToDecimal(chainId).toString();
   return `https://static.metafi.codefi.network/api/v1/tokenIcons/${chainIdDecimal}/${tokenAddress.toLowerCase()}.png`;
 };
