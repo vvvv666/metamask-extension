@@ -18,6 +18,8 @@ import log from 'loglevel';
 import TrezorKeyring from '@metamask/eth-trezor-keyring';
 import LedgerBridgeKeyring from '@metamask/eth-ledger-bridge-keyring';
 import LatticeKeyring from 'eth-lattice-keyring';
+// eslint-disable-next-line import/order
+import { SnapKeyring } from '@metamask/eth-snap-keyring';
 import { MetaMaskKeyring as QRHardwareKeyring } from '@keystonehq/metamask-airgapped-keyring';
 import EthQuery from 'eth-query';
 import nanoid from 'nanoid';
@@ -727,6 +729,10 @@ export default class MetamaskController extends EventEmitter {
         keyringBuilderFactory(keyringType),
       );
     }
+
+    ///: BEGIN:ONLY_INCLUDE_IN(snaps)
+    additionalKeyrings.push(keyringBuilderFactory(SnapKeyring));
+    ///: END:ONLY_INCLUDE_IN
 
     this.keyringController = new KeyringController({
       keyringBuilders: additionalKeyrings,
@@ -1567,6 +1573,29 @@ export default class MetamaskController extends EventEmitter {
   }
 
   ///: BEGIN:ONLY_INCLUDE_IN(snaps)
+
+  /**
+   * Initialize the snap keyring if it is not present.
+   */
+  async getSnapKeyring() {
+    if (!this.snapKeyring) {
+      // perform lookup
+      let [snapKeyring] =
+        this.keyringController.getKeyringsByType('Snap Keyring');
+      // if still missing, create
+      if (!snapKeyring) {
+        snapKeyring = await this.keyringController.addNewKeyring(
+          'Snap Keyring',
+        );
+      }
+      // we can't provide constructor arguments to keyrings
+      // so we have to set the provider here
+      snapKeyring.setController(this.snapController);
+      this.snapKeyring = snapKeyring;
+    }
+    return this.snapKeyring;
+  }
+
   /**
    * Constructor helper for getting Snap permission specifications.
    */
@@ -1622,6 +1651,16 @@ export default class MetamaskController extends EventEmitter {
           this.controllerMessenger,
           'SnapController:updateSnapState',
         ),
+        getSnapKeyring: this.getSnapKeyring.bind(this),
+        saveSnapKeyring: async (removedAddress) => {
+          if (removedAddress) {
+            this.keyringController.emit('removedAccount', removedAddress);
+          }
+          // TODO[muji]: add a save() method to KeyringController
+          await this.keyringController.persistAllKeyrings();
+          await this.keyringController._updateMemStoreKeyrings();
+          await this.keyringController.fullUpdate();
+        },
       }),
     };
   }
@@ -2619,6 +2658,9 @@ export default class MetamaskController extends EventEmitter {
       // set new identities
       this.preferencesController.setAddresses(accounts);
       this.selectFirstIdentity();
+      // set the snapcontroller referernce for snap keyring
+      const [snapKeyring] = keyringController.getKeyringsByType('Snap Keyring');
+      snapKeyring.setController(this.snapController);
       return vault;
     } finally {
       releaseLock();
@@ -2675,6 +2717,10 @@ export default class MetamaskController extends EventEmitter {
       this.preferencesController.getLedgerTransportPreference();
 
     this.setLedgerTransportPreference(transportPreference);
+    // set the snapcontroller referernce for snap keyring
+    const [snapKeyring] =
+      this.keyringController.getKeyringsByType('Snap Keyring');
+    snapKeyring.setController(this.snapController);
 
     return this.keyringController.fullUpdate();
   }

@@ -257,6 +257,12 @@ export const PERMISSION_DESCRIPTIONS = deepFreeze({
         </b>,
       ]),
     })),
+  [RestrictedMethods.snap_manageAccounts]: ({ t }) => ({
+    label: t('permission_manageAccounts'),
+    leftIcon: 'fas fa-door-open',
+    rightIcon: null,
+    weight: 3,
+  }),
   [RestrictedMethods.snap_getEntropy]: ({ t }) => ({
     label: t('permission_getEntropy'),
     description: t('permission_getEntropyDescription'),
@@ -297,6 +303,7 @@ export const PERMISSION_DESCRIPTIONS = deepFreeze({
       };
     });
   },
+
   [EndowmentPermissions['endowment:network-access']]: ({ t }) => ({
     label: t('permission_accessNetwork'),
     description: t('permission_accessNetworkDescription'),
