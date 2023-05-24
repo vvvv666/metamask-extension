@@ -76,8 +76,6 @@ const mapStateToProps = (state, ownProps) => {
   const requestType = getRequestType(state, permissionsRequestId);
 
   ///: BEGIN:ONLY_INCLUDE_IN(snaps)
-  const isSnap = targetSubjectMetadata.subjectType === SubjectType.Snap;
-
   const requestState = getRequestState(state, permissionsRequestId);
   ///: END:ONLY_INCLUDE_IN
 
@@ -99,11 +97,16 @@ const mapStateToProps = (state, ownProps) => {
   const snapInstallPath = `${CONNECT_ROUTE}/${permissionsRequestId}${CONNECT_SNAP_INSTALL_ROUTE}`;
   const snapUpdatePath = `${CONNECT_ROUTE}/${permissionsRequestId}${CONNECT_SNAP_UPDATE_ROUTE}`;
   const snapResultPath = `${CONNECT_ROUTE}/${permissionsRequestId}${CONNECT_SNAP_RESULT_ROUTE}`;
+
+  const isSnapInstallOrUpdate =
+    pathname === snapInstallPath ||
+    pathname === snapUpdatePath ||
+    pathname === snapResultPath;
   ///: END:ONLY_INCLUDE_IN
 
   let totalPages = 1 + isRequestingAccounts;
   ///: BEGIN:ONLY_INCLUDE_IN(snaps)
-  totalPages += isSnap;
+  totalPages += isSnapInstallOrUpdate;
   ///: END:ONLY_INCLUDE_IN
   totalPages = totalPages.toString();
 
@@ -113,11 +116,7 @@ const mapStateToProps = (state, ownProps) => {
   } else if (pathname === confirmPermissionPath) {
     page = isRequestingAccounts ? '2' : '1';
     ///: BEGIN:ONLY_INCLUDE_IN(snaps)
-  } else if (
-    pathname === snapInstallPath ||
-    pathname === snapUpdatePath ||
-    pathname === snapResultPath
-  ) {
+  } else if (isSnapInstallOrUpdate) {
     page = isRequestingAccounts ? '3' : '2';
     ///: END:ONLY_INCLUDE_IN
   } else {
@@ -132,7 +131,6 @@ const mapStateToProps = (state, ownProps) => {
     snapUpdatePath,
     snapResultPath,
     requestState,
-    isSnap,
     ///: END:ONLY_INCLUDE_IN
     permissionsRequest,
     permissionsRequestId,
