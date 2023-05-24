@@ -433,6 +433,12 @@ class Driver {
     }
   }
 
+  async closeWindowHandle(handle) {
+    await this.driver.switchTo().window(handle);
+    await this.delay(1000);
+    await this.driver.close();
+  }
+
   // Error handling
 
   async verboseReportOnFailure(title) {
