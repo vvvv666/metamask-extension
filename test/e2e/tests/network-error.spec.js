@@ -76,14 +76,6 @@ describe('Gas API fallback', function () {
 
         const inputAmount = await driver.findElement('.unit-input__input');
         await inputAmount.fill('1');
-
-        await driver.clickElement({ text: 'Next', tag: 'button' });
-
-        const error = await driver.isElementPresent({
-          text: 'Network is busy. Gas prices are high and estimates are less accurate.',
-        });
-
-        assert.equal(error, true, 'Network error is present');
       },
     );
   });

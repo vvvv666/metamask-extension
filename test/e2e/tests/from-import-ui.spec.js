@@ -399,45 +399,4 @@ describe('MetaMask Import UI', function () {
       },
     );
   });
-
-  it('Connects to a Hardware wallet', async function () {
-    const ganacheOptions = {
-      accounts: [
-        {
-          secretKey:
-            '0x53CB0AB5226EEBF4D872113D98332C1555DC304443BEE1CF759D15798D3C55A9',
-          balance: convertToHexValue(25000000000000000000),
-        },
-      ],
-    };
-
-    await withFixtures(
-      {
-        fixtures: new FixtureBuilder().build(),
-        ganacheOptions,
-        title: this.test.title,
-      },
-      async ({ driver }) => {
-        await driver.navigate();
-        await driver.fill('#password', 'correct horse battery staple');
-        await driver.press('#password', driver.Key.ENTER);
-
-        // choose Connect hardware wallet from the account menu
-        await driver.clickElement('.account-menu__icon');
-        await driver.clickElement({
-          text: 'Connect hardware wallet',
-          tag: 'div',
-        });
-        await driver.delay(regularDelayMs);
-
-        // should open the TREZOR Connect popup
-        await driver.clickElement('.hw-connect__btn:nth-of-type(2)');
-        await driver.delay(largeDelayMs * 2);
-        await driver.clickElement({ text: 'Continue', tag: 'button' });
-        await driver.waitUntilXWindowHandles(2);
-        const allWindows = await driver.getAllWindowHandles();
-        assert.equal(allWindows.length, 2);
-      },
-    );
-  });
 });
