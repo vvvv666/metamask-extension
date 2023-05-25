@@ -249,12 +249,10 @@ export default class SignatureRequestOriginal extends Component {
       clearConfirmTransaction,
       history,
       mostRecentOverviewPage,
-      sign,
       resolvePendingApproval,
       txData: { id },
     } = this.props;
 
-    // await sign(event);
     await resolvePendingApproval(id);
     clearConfirmTransaction();
     history.push(mostRecentOverviewPage);
@@ -282,7 +280,7 @@ export default class SignatureRequestOriginal extends Component {
   renderFooter = () => {
     const {
       cancel,
-      sign,
+      // sign,
       clearConfirmTransaction,
       history,
       mostRecentOverviewPage,
@@ -310,7 +308,7 @@ export default class SignatureRequestOriginal extends Component {
           if (type === MESSAGE_TYPE.ETH_SIGN) {
             this.setState({ showSignatureRequestWarning: true });
           } else {
-            await sign(event);
+            // await sign(event);
             await resolvePendingApproval(id);
             clearConfirmTransaction();
             history.push(mostRecentOverviewPage);
