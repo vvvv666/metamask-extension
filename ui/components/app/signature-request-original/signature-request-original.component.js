@@ -56,11 +56,9 @@ export default class SignatureRequestOriginal extends Component {
       balance: PropTypes.string,
       name: PropTypes.string,
     }).isRequired,
-    cancel: PropTypes.func.isRequired,
     clearConfirmTransaction: PropTypes.func.isRequired,
     history: PropTypes.object.isRequired,
     mostRecentOverviewPage: PropTypes.string.isRequired,
-    sign: PropTypes.func.isRequired,
     txData: PropTypes.object.isRequired,
     subjectMetadata: PropTypes.object,
     hardwareWalletRequiresConnection: PropTypes.bool,
@@ -70,7 +68,6 @@ export default class SignatureRequestOriginal extends Component {
     conversionRate: PropTypes.number,
     messagesCount: PropTypes.number,
     showRejectTransactionsConfirmationModal: PropTypes.func.isRequired,
-    cancelAll: PropTypes.func.isRequired,
     cancelAllApprovals: PropTypes.func.isRequired,
     rejectPendingApproval: PropTypes.func.isRequired,
     resolvePendingApproval: PropTypes.func.isRequired,
@@ -244,7 +241,7 @@ export default class SignatureRequestOriginal extends Component {
     );
   };
 
-  onSubmit = async (event) => {
+  onSubmit = async () => {
     const {
       clearConfirmTransaction,
       history,
@@ -258,17 +255,15 @@ export default class SignatureRequestOriginal extends Component {
     history.push(mostRecentOverviewPage);
   };
 
-  onCancel = async (event) => {
+  onCancel = async () => {
     const {
       clearConfirmTransaction,
       history,
       mostRecentOverviewPage,
-      cancel,
       rejectPendingApproval,
       txData: { id },
     } = this.props;
 
-    await cancel(event);
     await rejectPendingApproval(
       id,
       serializeError(ethErrors.provider.userRejectedRequest()),
@@ -279,8 +274,6 @@ export default class SignatureRequestOriginal extends Component {
 
   renderFooter = () => {
     const {
-      cancel,
-      // sign,
       clearConfirmTransaction,
       history,
       mostRecentOverviewPage,
@@ -295,8 +288,7 @@ export default class SignatureRequestOriginal extends Component {
       <PageContainerFooter
         cancelText={t('reject')}
         submitText={t('sign')}
-        onCancel={async (event) => {
-          await cancel(event);
+        onCancel={async () => {
           await rejectPendingApproval(
             id,
             serializeError(ethErrors.provider.userRejectedRequest()),
@@ -304,11 +296,10 @@ export default class SignatureRequestOriginal extends Component {
           clearConfirmTransaction();
           history.push(mostRecentOverviewPage);
         }}
-        onSubmit={async (event) => {
+        onSubmit={async () => {
           if (type === MESSAGE_TYPE.ETH_SIGN) {
             this.setState({ showSignatureRequestWarning: true });
           } else {
-            // await sign(event);
             await resolvePendingApproval(id);
             clearConfirmTransaction();
             history.push(mostRecentOverviewPage);
@@ -321,7 +312,6 @@ export default class SignatureRequestOriginal extends Component {
 
   handleCancelAll = () => {
     const {
-      cancelAll,
       clearConfirmTransaction,
       history,
       mostRecentOverviewPage,
@@ -335,7 +325,6 @@ export default class SignatureRequestOriginal extends Component {
       unapprovedTxCount,
       onSubmit: async () => {
         await cancelAllApprovals();
-        await cancelAll();
         clearConfirmTransaction();
         history.push(mostRecentOverviewPage);
       },
