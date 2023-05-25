@@ -508,11 +508,11 @@ export function getCurrentCurrency(state) {
 
 export function getTotalUnapprovedCount(state) {
   const { pendingApprovalCount = 0 } = state.metamask;
-  return (
-    pendingApprovalCount +
-    getSuggestedTokenCount(state) +
-    getSuggestedNftsCount(state)
-  );
+  return pendingApprovalCount;
+  // ( pendingApprovalCount +
+  //   getSuggestedTokenCount(state) +
+  //   getSuggestedNftsCount(state)
+  // );
 }
 
 export function getTotalUnapprovedMessagesCount(state) {
@@ -592,7 +592,7 @@ export function getSuggestedNfts(state) {
         },
         type,
       }) => {
-        if (!errors || !standard) {
+        if (errors === undefined && standard === undefined) {
           return false;
         }
         return (
