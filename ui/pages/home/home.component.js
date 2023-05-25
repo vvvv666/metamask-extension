@@ -110,7 +110,6 @@ export default class Home extends PureComponent {
     hasTransactionPendingApprovals: PropTypes.bool.isRequired,
     hasWatchTokenPendingApprovals: PropTypes.bool,
     hasWatchNftPendingApprovals: PropTypes.bool,
-    unconfirmedTransactionsCount: PropTypes.number,
     shouldShowSeedPhraseReminder: PropTypes.bool.isRequired,
     isPopup: PropTypes.bool,
     isNotification: PropTypes.bool.isRequired,
@@ -210,7 +209,6 @@ export default class Home extends PureComponent {
     } else if (
       firstPermissionsRequestId ||
       hasTransactionPendingApprovals ||
-      unconfirmedTransactionsCount > 0 ||
       hasWatchTokenPendingApprovals ||
       hasWatchNftPendingApprovals ||
       (!isNotification &&
@@ -277,7 +275,6 @@ export default class Home extends PureComponent {
       hasTransactionPendingApprovals,
       hasWatchTokenPendingApprovals,
       hasWatchNftPendingApprovals,
-      unconfirmedTransactionsCount,
       haveSwapsQuotes,
       showAwaitingSwapScreen,
       swapsFetchParams,
