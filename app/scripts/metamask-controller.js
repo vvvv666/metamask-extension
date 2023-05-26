@@ -1644,6 +1644,10 @@ export default class MetamaskController extends EventEmitter {
     this.notificationController.markRead(ids);
   }
 
+  revokeDynamicSnapPermissions(permissions) {
+    // TODO
+  }
+
   ///: END:ONLY_INCLUDE_IN
 
   /**
