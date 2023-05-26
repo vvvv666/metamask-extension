@@ -1,22 +1,42 @@
 const { strict: assert } = require('assert');
+const FixtureBuilder = require('../fixture-builder');
 const {
   withFixtures,
-  mockPhishingDetection,
-  SERVICE_WORKER_URL,
-  openDapp,
   defaultGanacheOptions,
+  SERVICE_WORKER_URL: CHROME_SERVICE_WORKER_URL,
+  openDapp,
 } = require('../helpers');
-const FixtureBuilder = require('../fixture-builder');
+
+const {
+  setupPhishingDetectionMocks,
+  BlockProvider,
+} = require('../tests/phishing-detection/helpers');
+
+const isChrome = process.env.SELENIUM_BROWSER === 'chrome';
 
 describe('Phishing warning page', function () {
   it('should restore the transaction when service worker restarts', async function () {
+    console.warn(
+      'This test is written for chrome and will fail if run in firefox.',
+    );
+
+    if (!isChrome) {
+      this.skip();
+    }
+
     await withFixtures(
       {
-        dapp: true,
         fixtures: new FixtureBuilder().build(),
         ganacheOptions: defaultGanacheOptions,
         title: this.test.title,
-        testSpecificMock: mockPhishingDetection,
+        testSpecificMock: async (mockServer) => {
+          return setupPhishingDetectionMocks(mockServer, {
+            blockProvider: BlockProvider.MetaMask,
+            blocklist: ['127.0.0.1'],
+          });
+        },
+        dapp: true,
+        failOnConsoleError: false,
       },
       async ({ driver }) => {
         await driver.navigate();
@@ -25,7 +45,7 @@ describe('Phishing warning page', function () {
         await driver.press('#password', driver.Key.ENTER);
 
         // Restart service worker
-        await driver.openNewPage(SERVICE_WORKER_URL);
+        await driver.openNewPage(CHROME_SERVICE_WORKER_URL);
 
         await driver.clickElement({
           text: 'Service workers',
