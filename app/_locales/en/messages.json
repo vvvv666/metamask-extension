@@ -3489,6 +3489,9 @@
   "revokeSpendingCapTooltipText": {
     "message": "This third party will be unable to spend any more of your current or future tokens."
   },
+  "revokePermission": {
+    "message": "Revoke permission"
+  },
   "riskRating": {
     "message": "Risk rating"
   },
