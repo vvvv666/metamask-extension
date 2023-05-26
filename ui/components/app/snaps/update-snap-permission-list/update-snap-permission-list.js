@@ -19,6 +19,7 @@ export default function UpdateSnapPermissionList({
         (permission, index) => {
           return (
             <PermissionCell
+              permissionName={permission.permissionName}
               title={permission.label}
               description={permission.description}
               weight={permission.weight}
@@ -36,6 +37,7 @@ export default function UpdateSnapPermissionList({
       ).map((permission, index) => {
         return (
           <PermissionCell
+            permissionName={permission.permissionName}
             title={permission.label}
             description={permission.description}
             weight={permission.weight}
@@ -49,6 +51,7 @@ export default function UpdateSnapPermissionList({
         (permission, index) => {
           return (
             <PermissionCell
+              permissionName={permission.permissionName}
               title={permission.label}
               description={permission.description}
               weight={permission.weight}

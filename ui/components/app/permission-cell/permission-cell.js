@@ -24,6 +24,7 @@ import Tooltip from '../../ui/tooltip';
 import { PermissionCellOptions } from './permission-cell-options';
 
 const PermissionCell = ({
+  permissionName,
   title,
   description,
   weight,
@@ -111,7 +112,10 @@ const PermissionCell = ({
       </Box>
       <Box>
         {showOptions ? (
-          <PermissionCellOptions />
+          <PermissionCellOptions
+            permissionName={permissionName}
+            description={description}
+          />
         ) : (
           <Tooltip html={<div>{description}</div>} position="bottom">
             <Icon color={infoIconColor} name={infoIcon} size={IconSize.Sm} />
@@ -123,6 +127,7 @@ const PermissionCell = ({
 };
 
 PermissionCell.propTypes = {
+  permissionName: PropTypes.string.isRequired,
   title: PropTypes.oneOfType([
     PropTypes.string.isRequired,
     PropTypes.object.isRequired,
