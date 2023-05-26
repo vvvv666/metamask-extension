@@ -4969,6 +4969,10 @@
   "wantToAddThisNetwork": {
     "message": "Want to add this network?"
   },
+  "wantsToAddThisAsset": {
+    "message": "$1 wants to add this asset",
+    "description": "$1 is the name of the website that wants to add an asset to your wallet"
+  },
   "warning": {
     "message": "Warning"
   },

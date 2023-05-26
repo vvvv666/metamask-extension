@@ -1,3 +1,4 @@
+import { error } from 'console';
 import React, { useCallback, useContext, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
@@ -18,7 +19,13 @@ import {
   MetaMetricsTokenEventSource,
 } from '../../../shared/constants/metametrics';
 import { AssetType } from '../../../shared/constants/transaction';
-import { ButtonLink, Icon, IconName } from '../../components/component-library';
+import {
+  ButtonIcon,
+  ButtonLink,
+  Icon,
+  IconName,
+  Text,
+} from '../../components/component-library';
 import {
   getCurrentChainId,
   getRpcPrefsForCurrentProvider,
@@ -26,9 +33,14 @@ import {
   getIpfsGateway,
 } from '../../selectors';
 import NftDefaultImage from '../../components/app/nft-default-image/nft-default-image';
-import { getAssetImageURL } from '../../helpers/utils/util';
-import IconButton from '../../components/ui/icon-button/icon-button';
-import { IconColor } from '../../helpers/constants/design-system';
+import { getAssetImageURL, shortenAddress } from '../../helpers/utils/util';
+import {
+  BorderRadius,
+  IconColor,
+  TextAlign,
+  TextVariant,
+} from '../../helpers/constants/design-system';
+import Box from '../../components/ui/box/box';
 
 const ConfirmAddSuggestedNFT = () => {
   const t = useContext(I18nContext);
@@ -42,12 +54,27 @@ const ConfirmAddSuggestedNFT = () => {
   const ipfsGateway = useSelector(getIpfsGateway);
   const trackEvent = useContext(MetaMetricsContext);
 
+  const errorMap = {
+    nftAlreadyWatchedError: 'The suggested NFT is already in the user’s wallet',
+    ownerFetchError: 'An error occurred while fetching the owner of the NFT',
+    wrongOwnerError: 'The user does not own the suggested NFT',
+  };
   const handleAddNftsClick = useCallback(async () => {
     await Promise.all(
       suggestedNfts.map(async ({ requestData: { asset, errors }, id }) => {
-        if (Object.values(errors).some((val) => val)) {
+        const errorKey = Object.entries(errors).find(
+          ([, v]) => v === true,
+        )?.[0];
+        if (errorKey) {
           await dispatch(
-            rejectPendingApproval(id, serializeError(new Error('test'))),
+            rejectPendingApproval(
+              id,
+              serializeError(
+                new Error(
+                  `${errorMap[errorKey]}. Contract Address:${asset.address} TokenId:${asset.tokenId}`,
+                ),
+              ),
+            ),
           );
           return;
         }
@@ -58,6 +85,7 @@ const ConfirmAddSuggestedNFT = () => {
           category: MetaMetricsEventCategory.Wallet,
           sensitiveProperties: {
             token_symbol: asset.symbol,
+            token_id: asset.tokenId,
             token_contract_address: asset.address,
             source_connection_method: MetaMetricsTokenEventSource.Dapp,
             token_standard: asset.standard,
@@ -71,21 +99,36 @@ const ConfirmAddSuggestedNFT = () => {
 
   const handleCancelNftClick = useCallback(async () => {
     await Promise.all(
-      suggestedNfts.map(({ id }) =>
+      suggestedNfts.map(async ({ id, requestData: { errors, asset } }) => {
+        const errorKey = Object.entries(errors).find(
+          ([, v]) => v === true,
+        )?.[0];
+        if (errorKey) {
+          return await dispatch(
+            rejectPendingApproval(
+              id,
+              serializeError(
+                new Error(
+                  `${errorMap[errorKey]}. ContractAddress:${asset.address}, TokenId:${asset.tokenId}`,
+                ),
+              ),
+            ),
+          );
+        }
+
         dispatch(
           rejectPendingApproval(
             id,
             serializeError(ethErrors.provider.userRejectedRequest()),
           ),
-        ),
-      ),
+        );
+      }),
     );
     history.push(mostRecentOverviewPage);
   }, [dispatch, history, mostRecentOverviewPage, suggestedNfts]);
 
   const goBackIfNoSuggestedNftsOnFirstRender = () => {
     if (!suggestedNfts.length) {
-      console.log('in here suggestedNfts', suggestedNfts);
       history.push(mostRecentOverviewPage);
     }
   };
@@ -95,24 +138,33 @@ const ConfirmAddSuggestedNFT = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  let origin;
+  if (suggestedNfts.length) {
+    origin = new URL(suggestedNfts[0].origin)?.host || 'dapp';
+  }
+  if (suggestedNfts.length === 1) {
+    // TODO
+  }
   return (
     <div className="page-container">
-      <div className="page-container__header">
-        <div className="page-container__title">{t('addSuggestedTokens')}</div>
-        <div className="page-container__subtitle">
-          {t('likeToImportTokens')}
-        </div>
-        {/* {knownTokenActionableMessage} */}
-        {/* {reusedTokenNameActionableMessage} */}
-      </div>
+      <Text
+        variant={TextVariant.headingLg}
+        textAlign={TextAlign.Center}
+        margin={2}
+      >
+        {t('addSuggestedTokens')}
+      </Text>
+      <Text variant={TextVariant.bodyMd} textAlign={TextAlign.Center}>
+        {t('wantsToAddThisAsset', [<ButtonLink>{origin}</ButtonLink>])}
+      </Text>
+      {/* {knownTokenActionableMessage} */}
+      {/* {reusedTokenNameActionableMessage} */}
       <div className="page-container__content">
-        <div className="confirm-add-suggested-nft">
-          <div className="confirm-add-suggested-nft__header">
-            <div className="confirm-add-suggested-nft__nft">{t('nft')}</div>
-            <div className="confirm-add-suggested-nft__details">
-              {t('details')}
-            </div>
-          </div>
+        <Box
+          className="confirm-add-suggested-nft"
+          padding={2}
+          borderRadius={BorderRadius.MD}
+        >
           <div className="confirm-add-suggested-nft__nft-list">
             {suggestedNfts.map(
               ({
@@ -145,40 +197,47 @@ const ConfirmAddSuggestedNFT = () => {
                         alt={name || tokenId}
                       />
                     ) : (
-                      <NftDefaultImage
-                        className="confirm-add-suggested-nft__nft-image-default"
-                        name={name || address}
-                        tokenId={tokenId}
-                      />
+                      <NftDefaultImage className="confirm-add-suggested-nft__nft-image-default" />
                     )}
-                    <div className="confirm-add-suggested-nft__nft-details">
-                      <div className="confirm-add-suggested-nft__nft-sub-details">
-                        {rpcPrefs.blockExplorerUrl ? (
-                          <ButtonLink
-                            className="confirm-add-suggested-nft__nft-name"
-                            // this will only work for etherscan
-                            href={`${blockExplorerLink}?a=${tokenId}`}
-                            target="_blank"
-                          >
-                            {name || symbol || address}
-                          </ButtonLink>
-                        ) : (
-                          <div className="confirm-add-suggested-nft__nft-name">
-                            {name || symbol || address}
-                          </div>
-                        )}
-                        <div className="confirm-add-suggested-nft__nft-tokenId">
-                          #{tokenId}
-                        </div>
-                      </div>
-                      <IconButton
+                    <div className="confirm-add-suggested-nft__nft-sub-details">
+                      {rpcPrefs.blockExplorerUrl ? (
+                        <ButtonLink
+                          className="confirm-add-suggested-nft__nft-name"
+                          // this will only work for etherscan
+                          href={`${blockExplorerLink}?a=${tokenId}`}
+                          title={address}
+                          target="_blank"
+                        >
+                          {name || symbol || shortenAddress(address)}
+                        </ButtonLink>
+                      ) : (
+                        <Text
+                          variant={TextVariant.bodySm}
+                          className="confirm-add-suggested-nft__nft-name"
+                          title={address}
+                        >
+                          {name || symbol || shortenAddress(address)}
+                        </Text>
+                      )}
+                      <Text
+                        variant={TextVariant.bodySm}
+                        className="confirm-add-suggested-nft__nft-tokenId"
+                      >
+                        #{tokenId}
+                      </Text>
+                    </div>
+                    {error ? (
+                      <Icon
+                        name={IconName.Danger}
+                        color={IconColor.warningDefault}
+                        style={{ margin: '0, 12px, 0, 8px' }}
+                        // TODO add tooltip
+                      />
+                    ) : (
+                      <ButtonIcon
                         className="confirm-add-suggested-nft__nft-remove"
-                        Icon={
-                          <Icon
-                            name={IconName.Close}
-                            color={IconColor.warningDefault}
-                          />
-                        }
+                        iconName={IconName.Close}
+                        color={IconColor.warningDefault}
                         disabled={error}
                         onClick={(e) => {
                           e.preventDefault();
@@ -193,13 +252,13 @@ const ConfirmAddSuggestedNFT = () => {
                           );
                         }}
                       />
-                    </div>
+                    )}
                   </div>
                 );
               },
             )}
           </div>
-        </div>
+        </Box>
       </div>
       <PageContainerFooter
         cancelText={t('cancel')}
