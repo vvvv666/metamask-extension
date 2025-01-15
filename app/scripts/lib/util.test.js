@@ -1,4 +1,9 @@
 import {
+  TransactionEnvelopeType,
+  TransactionStatus,
+  TransactionType,
+} from '@metamask/transaction-controller';
+import {
   ENVIRONMENT_TYPE_BACKGROUND,
   ENVIRONMENT_TYPE_FULLSCREEN,
   ENVIRONMENT_TYPE_NOTIFICATION,
@@ -8,13 +13,10 @@ import {
   PLATFORM_FIREFOX,
   PLATFORM_OPERA,
 } from '../../../shared/constants/app';
-import {
-  TransactionEnvelopeType,
-  TransactionStatus,
-  TransactionType,
-} from '../../../shared/constants/transaction';
 import { isPrefixedFormattedHexString } from '../../../shared/modules/network.utils';
+import * as FourBiteUtils from '../../../shared/lib/four-byte';
 import {
+  shouldEmitDappViewedEvent,
   addUrlProtocolPrefix,
   deferredPromise,
   formatTxMetaForRpcResult,
@@ -22,6 +24,7 @@ import {
   getPlatform,
   getValidUrl,
   isWebUrl,
+  getMethodDataName,
 } from './util';
 
 describe('app utils', () => {
@@ -255,6 +258,19 @@ describe('app utils', () => {
     });
   });
 
+  describe('shouldEmitDappViewedEvent', () => {
+    it('should return true for valid metrics IDs', () => {
+      expect(shouldEmitDappViewedEvent('fake-metrics-id-fd20')).toStrictEqual(
+        true,
+      );
+    });
+    it('should return false for invalid metrics IDs', () => {
+      expect(
+        shouldEmitDappViewedEvent('fake-metrics-id-invalid'),
+      ).toStrictEqual(false);
+    });
+  });
+
   describe('formatTxMetaForRpcResult', () => {
     it('should correctly format the tx meta object (EIP-1559)', () => {
       const txMeta = {
@@ -272,7 +288,6 @@ describe('app utils', () => {
         origin: 'other',
         chainId: '0x5',
         time: 1624408066355,
-        metamaskNetworkId: '5',
         hash: '0x4bcb6cd6b182209585f8ad140260ddb35c81a575dd40f508d9767e652a9f60e7',
         r: '0x4c3111e42ed5eec3dcecba1e234700f387e8693c373c61c3e54a762a26f1570e',
         s: '0x18bfc4eeb7ebcfacc3bd59ea100a6834ea3265e65945dbec69aa2a06564fafff',
@@ -317,7 +332,6 @@ describe('app utils', () => {
         origin: 'other',
         chainId: '0x5',
         time: 1624408066355,
-        metamaskNetworkId: '5',
         hash: '0x4bcb6cd6b182209585f8ad140260ddb35c81a575dd40f508d9767e652a9f60e7',
         r: '0x4c3111e42ed5eec3dcecba1e234700f387e8693c373c61c3e54a762a26f1570e',
         s: '0x18bfc4eeb7ebcfacc3bd59ea100a6834ea3265e65945dbec69aa2a06564fafff',
@@ -343,6 +357,83 @@ describe('app utils', () => {
       };
       const result = formatTxMetaForRpcResult(txMeta);
       expect(result).toStrictEqual(expectedResult);
+    });
+  });
+
+  describe('getMethodDataName', () => {
+    const knownMethodData = {
+      '0x60806040': {
+        name: 'Approve Tokens',
+      },
+      '0x095ea7b3': {
+        name: 'Approve Tokens',
+      },
+    };
+
+    it('return null if use4ByteResolution is not true', async () => {
+      expect(
+        await getMethodDataName(knownMethodData, false, '0x60806040'),
+      ).toStrictEqual(null);
+    });
+
+    it('return null if prefixedData is not defined', async () => {
+      expect(
+        await getMethodDataName(knownMethodData, true, undefined),
+      ).toStrictEqual(null);
+    });
+
+    it('return details from knownMethodData if defined', async () => {
+      expect(
+        await getMethodDataName(knownMethodData, true, '0x60806040'),
+      ).toStrictEqual(knownMethodData['0x60806040']);
+    });
+
+    it('invoke getMethodDataAsync if details not available in knownMethodData', async () => {
+      const DUMMY_METHOD_NAME = {
+        name: 'Dummy Method Name',
+      };
+      jest
+        .spyOn(FourBiteUtils, 'getMethodDataAsync')
+        .mockResolvedValue(DUMMY_METHOD_NAME);
+      expect(
+        await getMethodDataName(knownMethodData, true, '0x123', jest.fn()),
+      ).toStrictEqual(DUMMY_METHOD_NAME);
+    });
+
+    it('invoke addKnownMethodData if details not available in knownMethodData', async () => {
+      const DUMMY_METHOD_NAME = {
+        name: 'Dummy Method Name',
+      };
+      const addKnownMethodData = jest.fn();
+      jest
+        .spyOn(FourBiteUtils, 'getMethodDataAsync')
+        .mockResolvedValue(DUMMY_METHOD_NAME);
+      expect(
+        await getMethodDataName(
+          knownMethodData,
+          true,
+          '0x123',
+          addKnownMethodData,
+        ),
+      ).toStrictEqual(DUMMY_METHOD_NAME);
+      expect(addKnownMethodData).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not invoke addKnownMethodData if no method data available', async () => {
+      const addKnownMethodData = jest.fn();
+
+      jest.spyOn(FourBiteUtils, 'getMethodDataAsync').mockResolvedValue({});
+
+      expect(
+        await getMethodDataName(
+          knownMethodData,
+          true,
+          '0x123',
+          addKnownMethodData,
+        ),
+      ).toStrictEqual({});
+
+      expect(addKnownMethodData).toHaveBeenCalledTimes(0);
     });
   });
 });

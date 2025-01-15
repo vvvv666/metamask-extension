@@ -3,12 +3,22 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import configureMockStore from 'redux-mock-store';
 import thunk from 'redux-thunk';
+import { MetamaskNotificationsProvider } from '../../../contexts/metamask-notifications';
+// TODO: Remove restricted import
+// eslint-disable-next-line import/no-restricted-paths
 import { getEnvironmentType } from '../../../../app/scripts/lib/util';
 import { ENVIRONMENT_TYPE_POPUP } from '../../../../shared/constants/app';
 import mockState from '../../../../test/data/mock-state.json';
 import { tEn } from '../../../../test/lib/i18n-helpers';
 import { renderWithProvider } from '../../../../test/lib/render-helpers';
+import { getIsSecurityAlertsEnabled } from '../../../selectors';
 import SecurityTab from './security-tab.container';
+
+const mockOpenDeleteMetaMetricsDataModal = jest.fn();
+
+const mockSetSecurityAlertsEnabled = jest
+  .fn()
+  .mockImplementation(() => () => undefined);
 
 jest.mock('../../../../app/scripts/lib/util', () => {
   const originalModule = jest.requireActual('../../../../app/scripts/lib/util');
@@ -19,14 +29,37 @@ jest.mock('../../../../app/scripts/lib/util', () => {
   };
 });
 
-describe('Security Tab', () => {
-  mockState.appState.warning = 'warning'; // This tests an otherwise untested render branch
+jest.mock('../../../selectors', () => ({
+  ...jest.requireActual('../../../selectors'),
+  getIsSecurityAlertsEnabled: jest.fn(),
+}));
 
+jest.mock('../../../store/actions', () => ({
+  ...jest.requireActual('../../../store/actions'),
+  setSecurityAlertsEnabled: (val) => mockSetSecurityAlertsEnabled(val),
+}));
+
+jest.mock('../../../ducks/app/app.ts', () => {
+  return {
+    openDeleteMetaMetricsDataModal: () => {
+      return mockOpenDeleteMetaMetricsDataModal;
+    },
+  };
+});
+
+describe('Security Tab', () => {
   const mockStore = configureMockStore([thunk])(mockState);
+
+  function renderWithProviders(ui, store) {
+    return renderWithProvider(
+      <MetamaskNotificationsProvider>{ui}</MetamaskNotificationsProvider>,
+      store,
+    );
+  }
 
   function toggleCheckbox(testId, initialState, skipRender = false) {
     if (!skipRender) {
-      renderWithProvider(<SecurityTab />, mockStore);
+      renderWithProviders(<SecurityTab />, mockStore);
     }
 
     const container = screen.getByTestId(testId);
@@ -46,22 +79,13 @@ describe('Security Tab', () => {
   }
 
   it('should match snapshot', () => {
-    const { container } = renderWithProvider(<SecurityTab />, mockStore);
+    const { container } = renderWithProviders(<SecurityTab />, mockStore);
 
     expect(container).toMatchSnapshot();
   });
 
-  it('toggles opensea api enabled off', async () => {
-    expect(await toggleCheckbox('enableOpenSeaAPI', true)).toBe(true);
-  });
-
-  it('toggles opensea api enabled on', async () => {
-    mockState.metamask.openSeaEnabled = false;
-
-    const localMockStore = configureMockStore([thunk])(mockState);
-    renderWithProvider(<SecurityTab />, localMockStore);
-
-    expect(await toggleCheckbox('enableOpenSeaAPI', false, true)).toBe(true);
+  it('toggles Display NFT media enabled', async () => {
+    expect(await toggleCheckbox('displayNftMedia', true)).toBe(true);
   });
 
   it('toggles nft detection', async () => {
@@ -73,7 +97,7 @@ describe('Security Tab', () => {
     mockState.metamask.useNftDetection = false;
 
     const localMockStore = configureMockStore([thunk])(mockState);
-    renderWithProvider(<SecurityTab />, localMockStore);
+    renderWithProviders(<SecurityTab />, localMockStore);
 
     expect(await toggleCheckbox('useNftDetection', false, true)).toBe(true);
   });
@@ -100,12 +124,18 @@ describe('Security Tab', () => {
     );
   });
 
+  it('toggles network details validation', async () => {
+    expect(await toggleCheckbox('useSafeChainsListValidation', false)).toBe(
+      true,
+    );
+  });
+
   it('toggles metaMetrics', async () => {
     expect(await toggleCheckbox('participateInMetaMetrics', false)).toBe(true);
   });
 
   it('toggles SRP Quiz', async () => {
-    renderWithProvider(<SecurityTab />, mockStore);
+    renderWithProviders(<SecurityTab />, mockStore);
 
     expect(
       screen.queryByTestId(`srp_stage_introduction`),
@@ -126,7 +156,7 @@ describe('Security Tab', () => {
 
   it('sets IPFS gateway', async () => {
     const user = userEvent.setup();
-    renderWithProvider(<SecurityTab />, mockStore);
+    renderWithProviders(<SecurityTab />, mockStore);
 
     const ipfsField = screen.getByDisplayValue(mockState.metamask.ipfsGateway);
 
@@ -171,7 +201,7 @@ describe('Security Tab', () => {
     mockState.metamask.ipfsGateway = '';
 
     const localMockStore = configureMockStore([thunk])(mockState);
-    renderWithProvider(<SecurityTab />, localMockStore);
+    renderWithProviders(<SecurityTab />, localMockStore);
 
     expect(await toggleCheckbox('ipfsToggle', false, true)).toBe(true);
     expect(await toggleCheckbox('ipfsToggle', true, true)).toBe(true);
@@ -185,7 +215,7 @@ describe('Security Tab', () => {
 
   it('clicks "Add Custom Network"', async () => {
     const user = userEvent.setup();
-    renderWithProvider(<SecurityTab />, mockStore);
+    renderWithProviders(<SecurityTab />, mockStore);
 
     // Test the default path where `getEnvironmentType() === undefined`
     await user.click(screen.getByText(tEn('addCustomNetwork')));
@@ -199,5 +229,33 @@ describe('Security Tab', () => {
 
     await user.click(screen.getByText(tEn('addCustomNetwork')));
     expect(global.platform.openExtensionInBrowser).toHaveBeenCalled();
+  });
+  it('clicks "Delete MetaMetrics Data"', async () => {
+    mockState.metamask.participateInMetaMetrics = true;
+    mockState.metamask.metaMetricsId = 'fake-metametrics-id';
+
+    const localMockStore = configureMockStore([thunk])(mockState);
+    renderWithProviders(<SecurityTab />, localMockStore);
+
+    expect(
+      screen.queryByTestId(`delete-metametrics-data-button`),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Delete MetaMetrics data' }),
+    );
+
+    expect(mockOpenDeleteMetaMetricsDataModal).toHaveBeenCalled();
+  });
+  describe('Blockaid', () => {
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('invokes method setSecurityAlertsEnabled when blockaid is enabled', async () => {
+      getIsSecurityAlertsEnabled.mockReturnValue(false);
+      expect(await toggleCheckbox('securityAlert', false)).toBe(true);
+      expect(mockSetSecurityAlertsEnabled).toHaveBeenCalledWith(true);
+    });
   });
 });

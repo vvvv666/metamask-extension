@@ -22,8 +22,10 @@ export const AvatarAccountDiameter: Record<AvatarAccountSize, number> = {
   [AvatarAccountSize.Xl]: 48,
 };
 
+// TODO: Convert to a `type` in a future major version.
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 export interface AvatarAccountStyleUtilityProps
-  extends Omit<AvatarBaseStyleUtilityProps, 'size' | 'variant'> {
+  extends Omit<AvatarBaseStyleUtilityProps, 'size' | 'variant' | 'children'> {
   /**
    * The size of the AvatarAccount.
    * Possible values could be 'AvatarAccountSize.Xs', 'AvatarAccountSize.Sm', 'AvatarAccountSize.Md', 'AvatarAccountSize.Lg', 'AvatarAccountSize.Xl'

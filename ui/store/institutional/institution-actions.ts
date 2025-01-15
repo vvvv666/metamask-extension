@@ -1,5 +1,6 @@
 import { ThunkAction, ThunkDispatch } from 'redux-thunk';
 import { AnyAction } from 'redux';
+import { TransactionMeta } from '@metamask/transaction-controller';
 import {
   closeCurrentNotificationWindow,
   hideModal,
@@ -13,7 +14,7 @@ import {
 } from '../store';
 import { toChecksumHexAddress } from '../../../shared/modules/hexstring-utils';
 import { getCurrentNetworkTransactions } from '../../selectors';
-import { TransactionMeta } from '../../../shared/constants/transaction';
+import { CustodyStatus } from '../../../shared/constants/custody';
 
 export function showInteractiveReplacementTokenModal(): ThunkAction<
   void,
@@ -57,6 +58,8 @@ export function showCustodyConfirmLink({
 export function updateCustodyState(
   dispatch: ThunkDispatch<CombinedBackgroundAndReduxState, unknown, AnyAction>,
   newState: MetaMaskReduxState['metamask'],
+  // TODO: Replace `any` with type
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   state: CombinedBackgroundAndReduxState & any,
 ) {
   if (!newState.transactions || !state.metamask.transactions) {
@@ -72,6 +75,8 @@ export function updateCustodyState(
   const differentTxs = newCurrentNetworkTxList.filter(
     (item: TransactionMeta) =>
       oldCurrentNetworkTxList.filter(
+        // TODO: Replace `any` with type
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (tx: { [key: string]: any }) =>
           tx.custodyId === item.custodyId &&
           tx.custodyStatus !== item.custodyStatus,
@@ -93,9 +98,10 @@ export function updateCustodyState(
 
       return (
         tx.custodyId === state.appState.modal.modalState.props?.custodyId &&
+        tx.custodyStatus &&
         (state.metamask.custodyStatusMaps[custody][tx.custodyStatus]
           ?.mmStatus !== 'approved' ||
-          tx.custodyStatus === 'created')
+          tx.custodyStatus === CustodyStatus.CREATED)
       );
     }),
   );

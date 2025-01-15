@@ -1,36 +1,39 @@
 import React, { useContext, useEffect, useState } from 'react';
 
 import PropTypes from 'prop-types';
+import { NetworkConfiguration } from '@metamask/network-controller';
+import { Hex } from '@metamask/utils';
 import { I18nContext } from '../../../contexts/i18n';
 
-import ToggleButton from '../../ui/toggle-button';
 import { Box, Text } from '../../component-library';
 import {
-  Display,
-  FlexDirection,
-  JustifyContent,
   TextVariant,
   TextColor,
 } from '../../../helpers/constants/design-system';
 
 import { PolymorphicRef } from '../../component-library/box';
-import { TEST_CHAINS } from '../../../../shared/constants/network';
+import {
+  CHAIN_ID_TO_NETWORK_IMAGE_URL_MAP,
+  TEST_CHAINS,
+} from '../../../../shared/constants/network';
 import NetworkToggle from './network-toggle';
 
-interface IncomingTransactionToggleProps {
+type IncomingTransactionToggleProps = {
+  // TODO: Replace `any` with type
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   wrapperRef?: PolymorphicRef<any>;
   incomingTransactionsPreferences: Record<string, boolean>;
-  allNetworks: Record<string, any>[];
+  networkConfigurations: Record<Hex, NetworkConfiguration>;
   setIncomingTransactionsPreferences: (
     chainId: string,
     isAllEnabledValue: boolean,
   ) => void;
-}
+};
 
 const IncomingTransactionToggle = ({
   wrapperRef,
   incomingTransactionsPreferences,
-  allNetworks,
+  networkConfigurations,
   setIncomingTransactionsPreferences,
 }: IncomingTransactionToggleProps) => {
   const t = useContext(I18nContext);
@@ -38,34 +41,18 @@ const IncomingTransactionToggle = ({
   const [networkPreferences, setNetworkPreferences] = useState(
     generateIncomingNetworkPreferences(
       incomingTransactionsPreferences,
-      allNetworks,
+      networkConfigurations,
     ),
-  );
-
-  const [isAllEnabled, setIsAllEnabled] = useState(
-    checkAllNetworks(incomingTransactionsPreferences),
   );
 
   useEffect(() => {
     setNetworkPreferences(
       generateIncomingNetworkPreferences(
         incomingTransactionsPreferences,
-        allNetworks,
+        networkConfigurations,
       ),
     );
-  }, [incomingTransactionsPreferences, allNetworks]);
-
-  useEffect(() => {
-    setIsAllEnabled(checkAllNetworks(incomingTransactionsPreferences));
-  }, [incomingTransactionsPreferences]);
-
-  const toggleAllEnabled = (isAllEnabledValue: boolean): void => {
-    Object.keys(incomingTransactionsPreferences).forEach((chainId) => {
-      if (incomingTransactionsPreferences[chainId] !== isAllEnabledValue) {
-        setIncomingTransactionsPreferences(chainId, isAllEnabledValue);
-      }
-    });
-  };
+  }, [incomingTransactionsPreferences, networkConfigurations]);
 
   const toggleSingleNetwork = (chainId: string, value: boolean): void => {
     setIncomingTransactionsPreferences(chainId, value);
@@ -76,28 +63,9 @@ const IncomingTransactionToggle = ({
       <Text variant={TextVariant.bodyMdMedium}>
         {t('showIncomingTransactions')}
       </Text>
-
       <Text variant={TextVariant.bodySm} color={TextColor.textAlternative}>
-        {t('showIncomingTransactionsInformation')}
+        {t('showIncomingTransactionsExplainer')}
       </Text>
-      <Box
-        marginTop={3}
-        display={Display.Flex}
-        flexDirection={FlexDirection.Row}
-        justifyContent={JustifyContent.spaceBetween}
-        gap={4}
-        data-testid="incoming-transaction-toggle-enable-all"
-      >
-        <Text variant={TextVariant.bodySmBold}>
-          {t('enableForAllNetworks')}
-        </Text>
-        <ToggleButton
-          value={isAllEnabled}
-          onToggle={(value) => toggleAllEnabled(!value)}
-          offLabel={t('off')}
-          onLabel={t('on')}
-        />
-      </Box>
       {Object.keys(networkPreferences).map((chainId, index) => {
         return (
           <NetworkToggle
@@ -117,31 +85,34 @@ export default IncomingTransactionToggle;
 IncomingTransactionToggle.propTypes = {
   wrapperRef: PropTypes.object,
   incomingTransactionsPreferences: PropTypes.object.isRequired,
-  allNetworks: PropTypes.array.isRequired,
+  networkConfigurations: PropTypes.object.isRequired,
   setIncomingTransactionsPreferences: PropTypes.func.isRequired,
 };
 
 function generateIncomingNetworkPreferences(
   incomingTransactionsPreferences: Record<string, boolean>,
-  allNetworks: Record<string, any>,
+  networkConfigurations: Record<Hex, NetworkConfiguration>,
+  // TODO: Replace `any` with type
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Record<string, any> {
+  // TODO: Replace `any` with type
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const incomingTxnPreferences: Record<string, any> = {};
 
-  Object.keys(allNetworks).forEach((id) => {
-    const { chainId } = allNetworks[id];
-    incomingTxnPreferences[chainId] = {
-      isShowIncomingTransactions: incomingTransactionsPreferences[chainId],
-      isATestNetwork: TEST_CHAINS.includes(chainId),
-      label: allNetworks[id].nickname,
-      imageUrl: allNetworks[id].rpcPrefs?.imageUrl,
+  Object.values(networkConfigurations).forEach((network) => {
+    incomingTxnPreferences[network.chainId] = {
+      isShowIncomingTransactions:
+        incomingTransactionsPreferences[network.chainId],
+      isATestNetwork: TEST_CHAINS.includes(
+        network.chainId as (typeof TEST_CHAINS)[number],
+      ),
+      label: network.name,
+      imageUrl:
+        CHAIN_ID_TO_NETWORK_IMAGE_URL_MAP[
+          network.chainId as keyof typeof CHAIN_ID_TO_NETWORK_IMAGE_URL_MAP
+        ],
     };
   });
 
   return incomingTxnPreferences;
-}
-
-function checkAllNetworks(
-  incomingTransactionsPreferences: Record<string, boolean>,
-): boolean {
-  return Object.values(incomingTransactionsPreferences).every(Boolean);
 }

@@ -1,13 +1,13 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import classnames from 'classnames';
 import { useSelector } from 'react-redux';
-import { toChecksumHexAddress } from '@metamask/controller-utils';
+import { toChecksumHexAddress } from '../../../../shared/modules/hexstring-utils';
 import {
-  Box,
-  Button,
   AvatarAccount,
   AvatarAccountVariant,
-  Icon,
+  ButtonBase,
+  ButtonBaseSize,
   IconName,
   Text,
 } from '../../component-library';
@@ -16,48 +16,97 @@ import {
   BackgroundColor,
   BorderRadius,
   Display,
-  FlexDirection,
-  FontWeight,
   IconColor,
   Size,
-  TextAlign,
   TextColor,
   TextVariant,
 } from '../../../helpers/constants/design-system';
-import { getUseBlockie } from '../../../selectors';
+import {
+  getUseBlockie,
+  ///: BEGIN:ONLY_INCLUDE_IF(build-mmi)
+  getSelectedAddress,
+  ///: END:ONLY_INCLUDE_IF
+} from '../../../selectors';
 import { shortenAddress } from '../../../helpers/utils/util';
+///: BEGIN:ONLY_INCLUDE_IF(build-mmi)
+import { getCustodianIconForAddress } from '../../../selectors/institutional/selectors';
+///: END:ONLY_INCLUDE_IF
+import { trace, TraceName } from '../../../../shared/lib/trace';
 
 export const AccountPicker = ({
   address,
   name,
   onClick,
-  disabled,
+  disabled = false,
   showAddress = false,
+  addressProps = {},
+  labelProps = {},
+  textProps = {},
+  className = '',
+  ...props
 }) => {
   const useBlockie = useSelector(getUseBlockie);
   const shortenedAddress = shortenAddress(toChecksumHexAddress(address));
 
+  ///: BEGIN:ONLY_INCLUDE_IF(build-mmi)
+  const selectedAddress = useSelector(getSelectedAddress);
+  const custodianIcon = useSelector((state) =>
+    getCustodianIconForAddress(state, selectedAddress),
+  );
+  ///: END:ONLY_INCLUDE_IF
+
   return (
-    <Button
-      className="multichain-account-picker"
+    <ButtonBase
+      className={classnames('multichain-account-picker', className)}
       data-testid="account-menu-icon"
-      onClick={onClick}
+      onClick={() => {
+        trace({ name: TraceName.AccountList });
+        onClick();
+      }}
       backgroundColor={BackgroundColor.transparent}
       borderRadius={BorderRadius.LG}
       ellipsis
       textProps={{
         display: Display.Flex,
-        gap: 2,
         alignItems: AlignItems.center,
+        gap: 2,
+        ...textProps,
       }}
+      size={showAddress ? ButtonBaseSize.Lg : ButtonBaseSize.Sm}
       disabled={disabled}
+      endIconName={IconName.ArrowDown}
+      endIconProps={{
+        color: IconColor.iconDefault,
+        size: Size.SM,
+      }}
+      {...props}
+      gap={2}
     >
-      <Box
-        display={Display.Flex}
-        className="multichain-account-picker-container"
-        flexDirection={FlexDirection.Column}
-      >
-        <Box display={Display.Flex} alignItems={AlignItems.center} gap={1}>
+      {
+        ///: BEGIN:ONLY_INCLUDE_IF(build-main,build-beta,build-flask)
+        <AvatarAccount
+          variant={
+            useBlockie
+              ? AvatarAccountVariant.Blockies
+              : AvatarAccountVariant.Jazzicon
+          }
+          address={address}
+          size={showAddress ? Size.MD : Size.XS}
+          borderColor={BackgroundColor.backgroundDefault} // we currently don't have white color for border hence using backgroundDefault as the border
+        />
+        ///: END:ONLY_INCLUDE_IF
+      }
+
+      {
+        ///: BEGIN:ONLY_INCLUDE_IF(build-mmi)
+        custodianIcon ? (
+          <img
+            src={custodianIcon}
+            data-testid="custody-logo"
+            className="custody-logo"
+            alt="custody logo"
+          />
+        ) : (
           <AvatarAccount
             variant={
               useBlockie
@@ -65,29 +114,35 @@ export const AccountPicker = ({
                 : AvatarAccountVariant.Jazzicon
             }
             address={address}
-            size={Size.XS}
-            borderColor={BackgroundColor.backgroundDefault} // we currently don't have white color for border hence using backgroundDefault as the border
+            size={showAddress ? Size.MD : Size.XS}
+            borderColor={BackgroundColor.backgroundDefault}
           />
-          <Text as="span" fontWeight={FontWeight.Bold} ellipsis>
-            {name}
-          </Text>
-          <Icon
-            name={IconName.ArrowDown}
-            color={IconColor.iconDefault}
-            size={Size.SM}
-          />
-        </Box>
+        )
+        ///: END:ONLY_INCLUDE_IF
+      }
+
+      <Text
+        as="span"
+        ellipsis
+        {...labelProps}
+        className={classnames(
+          'multichain-account-picker__label',
+          labelProps.className ?? '',
+        )}
+      >
+        {name}
         {showAddress ? (
           <Text
             color={TextColor.textAlternative}
-            textAlign={TextAlign.Center}
             variant={TextVariant.bodySm}
+            ellipsis
+            {...addressProps}
           >
             {shortenedAddress}
           </Text>
         ) : null}
-      </Box>
-    </Button>
+      </Text>
+    </ButtonBase>
   );
 };
 
@@ -101,15 +156,35 @@ AccountPicker.propTypes = {
    */
   address: PropTypes.string.isRequired,
   /**
+   * Represents if the account address should display
+   */
+  showAddress: PropTypes.bool,
+  /**
+   * Props to be added to the address element
+   */
+  addressProps: PropTypes.object,
+  /**
    * Action to perform when the account picker is clicked
    */
   onClick: PropTypes.func.isRequired,
   /**
    * Represents if the AccountPicker should be actionable
    */
-  disabled: PropTypes.bool.isRequired,
+  disabled: PropTypes.bool,
   /**
-   * Represents if the account address should display
+   * Represents if the AccountPicker should take full width
    */
-  showAddress: PropTypes.bool,
+  block: PropTypes.bool,
+  /**
+   * Props to be added to the label element
+   */
+  labelProps: PropTypes.object,
+  /**
+   * Props to be added to the text element
+   */
+  textProps: PropTypes.object,
+  /**
+   * Additional className to be added to the AccountPicker
+   */
+  className: PropTypes.string,
 };

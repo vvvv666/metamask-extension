@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderWithProvider, fireEvent, waitFor } from '../../../../test/jest';
+import { fireEvent, renderWithProvider, waitFor } from '../../../../test/jest';
 import configureStore from '../../../store/store';
 import mockState from '../../../../test/data/mock-state.json';
 import { GlobalMenu } from '.';
@@ -12,7 +12,11 @@ const render = (metamaskStateChanges = {}) => {
     },
   });
   return renderWithProvider(
-    <GlobalMenu anchorElement={document.body} closeMenu={() => undefined} />,
+    <GlobalMenu
+      anchorElement={document.body}
+      isOpen
+      closeMenu={() => undefined}
+    />,
     store,
   );
 };
@@ -24,7 +28,7 @@ jest.mock('../../../store/actions', () => ({
   setAccountDetailsAddress: () => mockSetAccountDetailsAddress,
 }));
 
-describe('AccountListItem', () => {
+describe('Global Menu', () => {
   it('locks MetaMask when item is clicked', async () => {
     render();
     fireEvent.click(document.querySelector('[data-testid="global-menu-lock"]'));

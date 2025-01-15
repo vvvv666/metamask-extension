@@ -2,6 +2,7 @@ import qrCode from 'qrcode-generator';
 import React, { useContext, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
+import { getErrorMessage } from '../../../shared/modules/error';
 import {
   MetaMetricsEventCategory,
   MetaMetricsEventKeyType,
@@ -16,10 +17,10 @@ import {
   HelpText,
   HelpTextSeverity,
   Label,
-  TEXT_FIELD_SIZES,
-  TEXT_FIELD_TYPES,
   Text,
   TextField,
+  TextFieldSize,
+  TextFieldType,
 } from '../../components/component-library';
 import Box from '../../components/ui/box';
 import ExportTextContainer from '../../components/ui/export-text-container';
@@ -97,7 +98,7 @@ export default function RevealSeedPage() {
             reason: e.message, // 'incorrect_password',
           },
         });
-        setError(e.message);
+        setError(getErrorMessage(e));
       });
   };
 
@@ -127,13 +128,13 @@ export default function RevealSeedPage() {
           inputProps={{
             'data-testid': 'input-password',
           }}
-          type={TEXT_FIELD_TYPES.PASSWORD}
+          type={TextFieldType.Password}
           placeholder={t('makeSureNoOneWatching')}
           id="password-box"
-          size={TEXT_FIELD_SIZES.LG}
+          size={TextFieldSize.Large}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          error={error}
+          error={Boolean(error)}
           width={BlockSize.Full}
         />
         {error && (

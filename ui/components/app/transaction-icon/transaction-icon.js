@@ -1,10 +1,10 @@
 import React from 'react';
 import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
+import { TransactionStatus } from '@metamask/transaction-controller';
 import {
   TransactionGroupCategory,
   TransactionGroupStatus,
-  TransactionStatus,
 } from '../../../../shared/constants/transaction';
 import { captureSingleException } from '../../../store/actions';
 import { AvatarIcon, AvatarIconSize, IconName } from '../../component-library';
@@ -20,6 +20,7 @@ const ICON_MAP = {
   [TransactionGroupCategory.send]: IconName.Arrow2UpRight,
   [TransactionGroupCategory.signatureRequest]: IconName.SecurityTick,
   [TransactionGroupCategory.swap]: IconName.SwapHorizontal,
+  [TransactionGroupCategory.swapAndSend]: IconName.Arrow2UpRight,
 };
 
 const COLOR_MAP = {
@@ -95,5 +96,6 @@ TransactionIcon.propTypes = {
     TransactionGroupCategory.send,
     TransactionGroupCategory.signatureRequest,
     TransactionGroupCategory.swap,
+    TransactionGroupCategory.swapAndSend,
   ]).isRequired,
 };

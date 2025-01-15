@@ -1,10 +1,13 @@
-import { strict as assert } from 'assert';
-import sinon from 'sinon';
+/**
+ * @jest-environment node
+ */
+import { EthAccountType } from '@metamask/keyring-api';
+import { ETH_EOA_METHODS } from '../../../shared/constants/eth-methods';
+import { mockNetworkState } from '../../../test/stub/networks';
 import Backup from './backup';
 
 function getMockPreferencesController() {
-  const mcState = {
-    getSelectedAddress: sinon.stub().returns('0x01'),
+  const state = {
     selectedAddress: '0x01',
     identities: {
       '0x295e26495CEF6F69dFA69911d9D8e4F3bBadB89B': {
@@ -20,15 +23,14 @@ function getMockPreferencesController() {
         name: 'Ledger 1',
       },
     },
-    update: (store) => (mcState.store = store),
   };
+  const getSelectedAddress = jest.fn().mockReturnValue('0x01');
 
-  mcState.store = {
-    getState: sinon.stub().returns(mcState),
-    updateState: (store) => (mcState.store = store),
+  return {
+    state,
+    getSelectedAddress,
+    update: jest.fn(),
   };
-
-  return mcState;
 }
 
 function getMockAddressBookController() {
@@ -49,7 +51,7 @@ function getMockAddressBookController() {
   };
 
   mcState.store = {
-    getState: sinon.stub().returns(mcState),
+    getState: jest.fn().mockReturnValue(mcState),
     updateState: (store) => (mcState.store = store),
   };
 
@@ -58,14 +60,33 @@ function getMockAddressBookController() {
 
 function getMockNetworkController() {
   const state = {
-    networkConfigurations: {},
+    networkConfigurationsByChainId: {},
   };
 
-  const loadBackup = ({ networkConfigurations }) => {
-    Object.assign(state, { networkConfigurations });
+  const loadBackup = ({ networkConfigurationsByChainId }) => {
+    Object.assign(state, { networkConfigurationsByChainId });
   };
 
   return { state, loadBackup };
+}
+
+function getMockAccountsController() {
+  const state = {
+    internalAccounts: {
+      accounts: {},
+      selectedAccount: '',
+    },
+  };
+
+  const loadBackup = (internalAccounts) => {
+    Object.assign(state, { internalAccounts });
+  };
+
+  return {
+    state,
+    loadBackup,
+    getSelectedAccount: () => 'mock-id',
+  };
 }
 
 const jsonData = JSON.stringify({
@@ -83,15 +104,17 @@ const jsonData = JSON.stringify({
     },
   },
   network: {
-    networkConfigurations: {
-      'network-configuration-id-1': {
+    ...mockNetworkState(
+      {
+        id: 'network-configuration-id-1',
         chainId: '0x539',
         nickname: 'Localhost 8545',
         rpcPrefs: {},
         rpcUrl: 'http://localhost:8545',
         ticker: 'ETH',
       },
-      'network-configuration-id-2': {
+      {
+        id: 'network-configuration-id-2',
         chainId: '0x38',
         nickname: 'Binance Smart Chain Mainnet',
         rpcPrefs: {
@@ -100,7 +123,8 @@ const jsonData = JSON.stringify({
         rpcUrl: 'https://bsc-dataseed1.binance.org',
         ticker: 'BNB',
       },
-      'network-configuration-id-3': {
+      {
+        id: 'network-configuration-id-3',
         chainId: '0x61',
         nickname: 'Binance Smart Chain Testnet',
         rpcPrefs: {
@@ -109,7 +133,8 @@ const jsonData = JSON.stringify({
         rpcUrl: 'https://data-seed-prebsc-1-s1.binance.org:8545',
         ticker: 'tBNB',
       },
-      'network-configuration-id-4': {
+      {
+        id: 'network-configuration-id-4',
         chainId: '0x89',
         nickname: 'Polygon Mainnet',
         rpcPrefs: {
@@ -118,13 +143,14 @@ const jsonData = JSON.stringify({
         rpcUrl: 'https://polygon-rpc.com',
         ticker: 'MATIC',
       },
-    },
+    ),
   },
   preferences: {
     useBlockie: false,
     useNonceField: false,
     usePhishDetect: true,
     dismissSeedBackUpReminder: false,
+    overrideContentSecurityPolicyHeader: true,
     useTokenDetection: false,
     useCollectibleDetection: false,
     openSeaEnabled: false,
@@ -137,16 +163,38 @@ const jsonData = JSON.stringify({
     forgottenPassword: false,
     preferences: {
       hideZeroBalanceTokens: false,
+      showExtensionInFullSizeView: false,
       showFiatInTestnets: false,
       showTestNetworks: true,
+      smartTransactionsOptInStatus: true,
       useNativeCurrencyAsPrimaryCurrency: true,
+      showMultiRpcModal: false,
     },
     ipfsGateway: 'dweb.link',
-    infuraBlocked: false,
     ledgerTransportType: 'webhid',
     theme: 'light',
     customNetworkListEnabled: false,
     textDirection: 'auto',
+    useRequestQueue: true,
+  },
+  internalAccounts: {
+    accounts: {
+      'fcbcdca4-cc47-4bc8-b455-b14421e9277e': {
+        address: '0x129af01f4b770b30615f049790e1e206ebaa7b10',
+        id: 'fcbcdca4-cc47-4bc8-b455-b14421e9277e',
+        metadata: {
+          name: 'Account 1',
+          keyring: {
+            type: 'HD Key Tree',
+          },
+          lastSelected: 1693289751176,
+        },
+        options: {},
+        methods: ETH_EOA_METHODS,
+        type: EthAccountType.Eoa,
+      },
+    },
+    selectedAccount: 'fcbcdca4-cc47-4bc8-b455-b14421e9277e',
   },
 });
 
@@ -156,7 +204,8 @@ describe('Backup', function () {
       preferencesController: getMockPreferencesController(),
       addressBookController: getMockAddressBookController(),
       networkController: getMockNetworkController(),
-      trackMetaMetricsEvent: sinon.stub(),
+      accountsController: getMockAccountsController(),
+      trackMetaMetricsEvent: jest.fn(),
     });
   };
 
@@ -164,83 +213,105 @@ describe('Backup', function () {
     it('should setup correctly', async function () {
       const backup = getBackup();
       const selectedAddress = backup.preferencesController.getSelectedAddress();
-      assert.equal(selectedAddress, '0x01');
+      expect(selectedAddress).toStrictEqual('0x01');
     });
 
     it('should restore backup', async function () {
       const backup = getBackup();
       await backup.restoreUserData(jsonData);
       // check networks backup
-      assert.equal(
-        backup.networkController.state.networkConfigurations[
-          'network-configuration-id-1'
-        ].chainId,
-        '0x539',
-      );
-      assert.equal(
-        backup.networkController.state.networkConfigurations[
-          'network-configuration-id-2'
-        ].chainId,
-        '0x38',
-      );
-      assert.equal(
-        backup.networkController.state.networkConfigurations[
-          'network-configuration-id-3'
-        ].chainId,
-        '0x61',
-      );
-      assert.equal(
-        backup.networkController.state.networkConfigurations[
-          'network-configuration-id-4'
-        ].chainId,
-        '0x89',
-      );
+      expect(
+        backup.networkController.state.networkConfigurationsByChainId['0x539']
+          .rpcEndpoints[0].networkClientId,
+      ).toStrictEqual('network-configuration-id-1');
+      expect(
+        backup.networkController.state.networkConfigurationsByChainId['0x38']
+          .rpcEndpoints[0].networkClientId,
+      ).toStrictEqual('network-configuration-id-2');
+      expect(
+        backup.networkController.state.networkConfigurationsByChainId['0x61']
+          .rpcEndpoints[0].networkClientId,
+      ).toStrictEqual('network-configuration-id-3');
+      expect(
+        backup.networkController.state.networkConfigurationsByChainId['0x89']
+          .rpcEndpoints[0].networkClientId,
+      ).toStrictEqual('network-configuration-id-4');
       // make sure identities are not lost after restore
-      assert.equal(
-        backup.preferencesController.store.identities[
+      expect(
+        backup.preferencesController.state.identities[
           '0x295e26495CEF6F69dFA69911d9D8e4F3bBadB89B'
         ].lastSelected,
-        1655380342907,
-      );
-      assert.equal(
-        backup.preferencesController.store.identities[
+      ).toStrictEqual(1655380342907);
+
+      expect(
+        backup.preferencesController.state.identities[
           '0x295e26495CEF6F69dFA69911d9D8e4F3bBadB89B'
         ].name,
-        'Account 3',
-      );
-      assert.equal(
-        backup.preferencesController.store.lostIdentities[
+      ).toStrictEqual('Account 3');
+
+      expect(
+        backup.preferencesController.state.lostIdentities[
           '0xfd59bbe569376e3d3e4430297c3c69ea93f77435'
         ].lastSelected,
-        1655379648197,
-      );
-      assert.equal(
-        backup.preferencesController.store.lostIdentities[
+      ).toStrictEqual(1655379648197);
+
+      expect(
+        backup.preferencesController.state.lostIdentities[
           '0xfd59bbe569376e3d3e4430297c3c69ea93f77435'
         ].name,
-        'Ledger 1',
-      );
+      ).toStrictEqual('Ledger 1');
       // make sure selected address is not lost after restore
-      assert.equal(backup.preferencesController.store.selectedAddress, '0x01');
+      expect(backup.preferencesController.state.selectedAddress).toStrictEqual(
+        '0x01',
+      );
+
       // check address book backup
-      assert.equal(
+      expect(
         backup.addressBookController.store.addressBook['0x61'][
           '0x42EB768f2244C8811C63729A21A3569731535f06'
         ].chainId,
-        '0x61',
-      );
-      assert.equal(
+      ).toStrictEqual('0x61');
+
+      expect(
         backup.addressBookController.store.addressBook['0x61'][
           '0x42EB768f2244C8811C63729A21A3569731535f06'
         ].address,
-        '0x42EB768f2244C8811C63729A21A3569731535f06',
-      );
-      assert.equal(
+      ).toStrictEqual('0x42EB768f2244C8811C63729A21A3569731535f06');
+
+      expect(
         backup.addressBookController.store.addressBook['0x61'][
           '0x42EB768f2244C8811C63729A21A3569731535f06'
         ].isEns,
-        false,
-      );
+      ).toBeFalsy();
+
+      // make sure the internal accounts are restored
+      expect(
+        backup.accountsController.state.internalAccounts.accounts[
+          'fcbcdca4-cc47-4bc8-b455-b14421e9277e'
+        ],
+      ).toStrictEqual({
+        address: '0x129af01f4b770b30615f049790e1e206ebaa7b10',
+        id: 'fcbcdca4-cc47-4bc8-b455-b14421e9277e',
+        metadata: {
+          keyring: { type: 'HD Key Tree' },
+          lastSelected: 1693289751176,
+          name: 'Account 1',
+        },
+        methods: [
+          'personal_sign',
+          'eth_signTransaction',
+          'eth_signTypedData_v1',
+          'eth_signTypedData_v3',
+          'eth_signTypedData_v4',
+        ],
+        options: {},
+        type: 'eip155:eoa',
+      });
+
+      // make sure selected account is restored
+      expect(
+        backup.accountsController.state.internalAccounts.selectedAccount,
+      ).toBe('fcbcdca4-cc47-4bc8-b455-b14421e9277e');
     });
   });
 });

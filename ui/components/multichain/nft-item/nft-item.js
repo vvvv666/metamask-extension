@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import classnames from 'classnames';
 import { useSelector } from 'react-redux';
-import NftDefaultImage from '../../app/nft-default-image/nft-default-image';
+import NftDefaultImage from '../../app/assets/nfts/nft-default-image/nft-default-image';
 import {
   AvatarNetwork,
   AvatarNetworkSize,
@@ -17,6 +17,7 @@ import {
 } from '../../../helpers/constants/design-system';
 import {
   getIpfsGateway,
+  getOpenSeaEnabled,
   getTestNetworkBackgroundColor,
 } from '../../../selectors';
 
@@ -29,11 +30,37 @@ export const NftItem = ({
   tokenId,
   onClick,
   clickable,
-  nftImageURL,
+  isIpfsURL,
+  badgeWrapperClassname,
 }) => {
   const testNetworkBackgroundColor = useSelector(getTestNetworkBackgroundColor);
   const isIpfsEnabled = useSelector(getIpfsGateway);
-  const isIpfsURL = nftImageURL?.includes('ipfs:');
+  const openSeaEnabled = useSelector(getOpenSeaEnabled);
+
+  const ipfsImageIsRenderable = isIpfsEnabled && isIpfsURL && src;
+  const openseaImageIsRenderable = openSeaEnabled && src && !isIpfsURL;
+
+  const nftImageComponentToRender =
+    ipfsImageIsRenderable || openseaImageIsRenderable ? (
+      <Box
+        className="nft-item__item nft-item__item-image"
+        data-testid="nft-image"
+        as="img"
+        src={src}
+        alt={alt}
+        display={Display.Block}
+        justifyContent={JustifyContent.center}
+      />
+    ) : (
+      <NftDefaultImage
+        className="nft-item__default-image"
+        data-testid="nft-default-image"
+        name={name}
+        tokenId={tokenId}
+        clickable={clickable && isIpfsURL}
+      />
+    );
+
   return (
     <Box
       className="nft-item__container"
@@ -42,9 +69,13 @@ export const NftItem = ({
       onClick={onClick}
     >
       <BadgeWrapper
-        className={classnames('nft-item__badge-wrapper', {
-          'nft-item__badge-wrapper__clickable': clickable,
-        })}
+        className={classnames(
+          'nft-item__badge-wrapper',
+          badgeWrapperClassname,
+          {
+            'nft-item__badge-wrapper__clickable': clickable,
+          },
+        )}
         anchorElementShape={BadgeWrapperAnchorElementShape.circular}
         positionObj={{ top: -4, right: -4 }}
         display={Display.Block}
@@ -64,52 +95,48 @@ export const NftItem = ({
           />
         }
       >
-        {isIpfsEnabled ? (
-          <Box
-            className="nft-item__item nft-item__item-image"
-            data-testid="nft-image"
-            as="img"
-            src={src}
-            alt={alt}
-            display={Display.Block}
-            justifyContent={JustifyContent.center}
-          />
-        ) : (
-          <>
-            {isIpfsURL ? (
-              <NftDefaultImage
-                className="nft-item__default-image"
-                data-testid="nft-default-image"
-                name={name}
-                tokenId={tokenId}
-                clickable={clickable}
-              />
-            ) : (
-              <Box
-                className="nft-item__item nft-item__item-image"
-                data-testid="nft-image"
-                as="img"
-                src={src}
-                alt={alt}
-                display={Display.Block}
-                justifyContent={JustifyContent.center}
-              />
-            )}
-          </>
-        )}
+        {nftImageComponentToRender}
       </BadgeWrapper>
     </Box>
   );
 };
 
 NftItem.propTypes = {
+  /**
+   * NFT media source
+   */
   src: PropTypes.string,
+  /**
+   * Alt text for the NFT
+   */
   alt: PropTypes.string.isRequired,
-  name: PropTypes.string.isRequired,
+  /**
+   * The NFT's name
+   */
+  name: PropTypes.string,
+  /**
+   * Name of the network the NFT lives on
+   */
   networkName: PropTypes.string.isRequired,
-  networkSrc: PropTypes.string.isRequired,
+  /**
+   * Image that represents the network
+   */
+  networkSrc: PropTypes.string,
+  /**
+   * Token ID of the NFT
+   */
   tokenId: PropTypes.string.isRequired,
+  /**
+   * Executes when the NFT is clicked
+   */
   onClick: PropTypes.func,
+  /**
+   * Represents if the NFT is clickable for larger image
+   */
   clickable: PropTypes.bool,
-  nftImageURL: PropTypes.string,
+  /**
+   * Whether the src url resolve to ipfs
+   */
+  isIpfsURL: PropTypes.bool,
+  badgeWrapperClassname: PropTypes.string,
 };

@@ -26,6 +26,8 @@ export enum PopoverRole {
   Dialog = 'dialog',
 }
 
+// TODO: Convert to a `type` in a future major version.
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 export interface PopoverStyleUtilityProps extends StyleUtilityProps {
   /**
    * The contents within the Popover
@@ -96,6 +98,10 @@ export interface PopoverStyleUtilityProps extends StyleUtilityProps {
    * Pass a close function for the escape key callback to close the Popover
    */
   onPressEscKey?: () => void;
+  /**
+   * On click outside callback to close the Popover
+   */
+  onClickOutside?: () => void;
 }
 
 export type PopoverProps<C extends React.ElementType> =

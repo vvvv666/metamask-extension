@@ -13,7 +13,7 @@ import {
   getUseCurrencyRateCheck,
 } from '../../../../selectors';
 import { MetaMetricsEventCategory } from '../../../../../shared/constants/metametrics';
-import { SWAPS_CHAINID_DEFAULT_BLOCK_EXPLORER_URL_MAP } from '../../../../../shared/constants/swaps';
+import { CHAINID_DEFAULT_BLOCK_EXPLORER_URL_MAP } from '../../../../../shared/constants/common';
 import { getURLHostName } from '../../../../helpers/utils/util';
 import { MetaMetricsContext } from '../../../../contexts/metametrics';
 
@@ -35,7 +35,7 @@ export default function ItemList({
   const rpcPrefs = useSelector(getRpcPrefsForCurrentProvider);
   const blockExplorerLink =
     rpcPrefs.blockExplorerUrl ??
-    SWAPS_CHAINID_DEFAULT_BLOCK_EXPLORER_URL_MAP[chainId] ??
+    CHAINID_DEFAULT_BLOCK_EXPLORER_URL_MAP[chainId] ??
     null;
   const useCurrencyRateCheck = useSelector(getUseCurrencyRateCheck);
   const blockExplorerHostName = getURLHostName(blockExplorerLink);
@@ -102,7 +102,7 @@ export default function ItemList({
               onClick={onClick}
               onKeyUp={(e) => e.key === 'Enter' && onClick()}
               key={`searchable-item-list-item-${i}`}
-              title={blocked && t('swapTokenNotAvailable')}
+              title={blocked ? t('swapTokenNotAvailable') : null}
             >
               {iconUrl || primaryLabel ? (
                 <UrlIcon url={iconUrl} name={primaryLabel} />
